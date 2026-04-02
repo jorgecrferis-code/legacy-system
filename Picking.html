@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Picking</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial">
+
+<h2>PICKING SCREEN</h2>
+<div id="items">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function getOrderId() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("order_id");
+}
+
+const orderId = getOrderId();
+
+async function loadItems() {
+  const { data } = await supabaseClient
+    .from("order_items")
+    .select("*")
+    .eq("order_id", orderId);
+
+  let html = "";
+
+  if(data){
+    data.forEach(item => {
+      html += `
+        <div style="margin-bottom:10px;">
+          Product ${item.product_id} - Qty ${item.qty}
+        </div>
+      `;
+    });
+  }
+
+  document.getElementById("items").innerHTML = html;
+}
+
+loadItems();
+</script>
+
+</body>
+</html>
