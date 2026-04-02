@@ -19,9 +19,7 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function loadOrders() {
-  document.getElementById("orders").innerHTML = "Loading orders...";
-
-  const { data, error } = await db
+  let { data, error } = await db
     .from("orders")
     .select("*")
     .eq("status", "WAITING");
@@ -50,7 +48,12 @@ async function loadOrders() {
   document.getElementById("orders").innerHTML = html;
 }
 
-function openPick(id){
+async function openPick(id){
+  await db
+    .from("orders")
+    .update({ status: "PICKING" })
+    .eq("id", id);
+
   window.location.href = "picking.html?order_id=" + id;
 }
 
