@@ -3,44 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <title>Waiting Picking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body style="font-family: Arial">
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
 <h2>WAITING PICKING</h2>
+
 <div id="orders">Loading...</div>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+const SUPABASE_ANON_KEY = "SUA_ANON_KEY_AQUI";
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function loadOrders() {
-  const { data } = await supabaseClient
+  const { data, error } = await supabase
     .from("orders")
     .select("*")
-    .eq("status", "WAITING");
+    .eq("status", "WAITING")
+    .order("id", { ascending: false });
 
   let html = "";
 
-  if(data){
+  if (data && data.length > 0) {
     data.forEach(order => {
       html += `
-        <div style="margin-bottom:10px;">
-          Order #${order.id}
+        <div style="background:white; padding:15px; margin-bottom:10px;">
+          <b>Order #${order.id}</b>
+          <br><br>
           <button onclick="openPick(${order.id})">OPEN PICK</button>
         </div>
       `;
     });
+  } else {
+    html = "No orders waiting";
   }
 
   document.getElementById("orders").innerHTML = html;
 }
 
 async function openPick(orderId) {
-  await supabaseClient
+  await supabase
     .from("orders")
     .update({ status: "PICKING" })
     .eq("id", orderId);
@@ -49,6 +55,9 @@ async function openPick(orderId) {
 }
 
 loadOrders();
+
+// auto refresh every 5 seconds
+setInterval(loadOrders, 5000);
 </script>
 
 </body>
