@@ -12,7 +12,7 @@
 <div id="items">Loading items...</div>
 
 <br>
-<button onclick="finishPicking()">FINISH PICKING</button>
+<button id="finishBtn" onclick="finishPicking()" disabled>FINISH PICKING</button>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -36,8 +36,11 @@ async function loadItems() {
   }
 
   let html = "";
+  let allPicked = true;
 
   data.forEach(item => {
+    if(!item.picked) allPicked = false;
+
     html += `
       <div style="margin:10px;padding:10px;border:1px solid #ccc;">
         <input type="checkbox"
@@ -49,6 +52,10 @@ async function loadItems() {
   });
 
   document.getElementById("items").innerHTML = html;
+
+  if(allPicked){
+    document.getElementById("finishBtn").disabled = false;
+  }
 }
 
 async function togglePicked(item_id, checked){
@@ -56,20 +63,11 @@ async function togglePicked(item_id, checked){
     .from("order_items")
     .update({ picked: checked })
     .eq("id", item_id);
+
+  loadItems();
 }
 
 async function finishPicking(){
-  const { data } = await db
-    .from("order_items")
-    .select("*")
-    .eq("order_id", order_id)
-    .eq("picked", false);
-
-  if(data.length > 0){
-    alert("Ainda existem itens não pickados!");
-    return;
-  }
-
   await db
     .from("orders")
     .update({ status: "PACKING" })
