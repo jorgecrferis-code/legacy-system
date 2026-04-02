@@ -3,61 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <title>Waiting Picking</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
-
+<body style="font-family: Arial; padding:20px;">
 <h2>WAITING PICKING</h2>
 
 <div id="orders">Loading...</div>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "SUA_ANON_KEY_AQUI";
+const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function loadOrders() {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("orders")
     .select("*")
-    .eq("status", "WAITING")
-    .order("id", { ascending: false });
+    .eq("status", "WAITING");
+
+  if(error){
+    document.getElementById("orders").innerHTML = "Error loading orders";
+    console.log(error);
+    return;
+  }
 
   let html = "";
 
-  if (data && data.length > 0) {
-    data.forEach(order => {
-      html += `
-        <div style="background:white; padding:15px; margin-bottom:10px;">
-          <b>Order #${order.id}</b>
-          <br><br>
-          <button onclick="openPick(${order.id})">OPEN PICK</button>
-        </div>
-      `;
-    });
-  } else {
-    html = "No orders waiting";
-  }
+  data.forEach(order => {
+    html += `
+      <div style="margin:10px;padding:10px;border:1px solid #ccc;">
+        Order #${order.id} - ${order.customer_name || ""}
+        <button onclick="openPick(${order.id})">OPEN PICK</button>
+      </div>
+    `;
+  });
 
   document.getElementById("orders").innerHTML = html;
 }
 
-async function openPick(orderId) {
-  await supabase
-    .from("orders")
-    .update({ status: "PICKING" })
-    .eq("id", orderId);
-
-  window.location.href = "picking.html?order_id=" + orderId;
+function openPick(id){
+  window.location.href = "picking.html?order_id=" + id;
 }
 
 loadOrders();
-
-// auto refresh every 5 seconds
-setInterval(loadOrders, 5000);
 </script>
 
 </body>
