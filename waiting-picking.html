@@ -13,7 +13,7 @@
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -25,14 +25,16 @@ async function loadOrders() {
 
   let html = "";
 
-  data.forEach(order => {
-    html += `
-      <div>
-        Order #${order.id}
-        <button onclick="openPick(${order.id})">OPEN PICK</button>
-      </div>
-    `;
-  });
+  if(data){
+    data.forEach(order => {
+      html += `
+        <div style="margin-bottom:10px;">
+          Order #${order.id}
+          <button onclick="openPick(${order.id})">OPEN PICK</button>
+        </div>
+      `;
+    });
+  }
 
   document.getElementById("orders").innerHTML = html;
 }
