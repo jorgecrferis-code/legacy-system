@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Waiting Picking</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial">
+
+<h2>WAITING PICKING</h2>
+<div id="orders">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadOrders() {
+  const { data } = await supabaseClient
+    .from("orders")
+    .select("*")
+    .eq("status", "WAITING");
+
+  let html = "";
+
+  data.forEach(order => {
+    html += `
+      <div>
+        Order #${order.id}
+        <button onclick="openPick(${order.id})">OPEN PICK</button>
+      </div>
+    `;
+  });
+
+  document.getElementById("orders").innerHTML = html;
+}
+
+async function openPick(orderId) {
+  await supabaseClient
+    .from("orders")
+    .update({ status: "PICKING" })
+    .eq("id", orderId);
+
+  window.location.href = "picking.html?order_id=" + orderId;
+}
+
+loadOrders();
+</script>
+
+</body>
+</html>
