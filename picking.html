@@ -3,46 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <title>Picking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body style="font-family: Arial">
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
-<h2>PICKING SCREEN</h2>
+<h2>PICKING</h2>
+
 <div id="items">Loading...</div>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+const SUPABASE_ANON_KEY = "SUA_ANON_KEY_AQUI";
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function getOrderId() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("order_id");
-}
-
-const orderId = getOrderId();
+const urlParams = new URLSearchParams(window.location.search);
+const order_id = urlParams.get("order_id");
 
 async function loadItems() {
-  const { data } = await supabaseClient
+  const { data } = await supabase
     .from("order_items")
     .select("*")
-    .eq("order_id", orderId);
+    .eq("order_id", order_id);
 
   let html = "";
 
   if(data){
     data.forEach(item => {
       html += `
-        <div style="margin-bottom:10px;">
-          Product ${item.product_id} - Qty ${item.qty}
+        <div style="background:white; padding:15px; margin-bottom:10px;">
+          <b>${item.product}</b>
+          <br>
+          Qty: ${item.qty}
+          <br><br>
+          <button onclick="pickItem(${item.id})">PICK</button>
         </div>
       `;
     });
   }
 
   document.getElementById("items").innerHTML = html;
+}
+
+async function pickItem(id) {
+  await supabase
+    .from("order_items")
+    .update({ picked: true })
+    .eq("id", id);
+
+  loadItems();
 }
 
 loadItems();
