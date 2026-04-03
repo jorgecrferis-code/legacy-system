@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Legacy - Inventory</title>
+  <title>Inventory</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -25,15 +25,14 @@
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
-
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function loadInventory() {
   let search = document.getElementById('search').value;
 
   let query = supabase
-    .from('product_search')
+    .from('inventory_summary')
     .select('*')
     .order('name');
 
@@ -48,23 +47,24 @@ async function loadInventory() {
     return;
   }
 
-  let html = "";
+  let html = '';
 
-  data.forEach(p => {
+  (data || []).forEach(item => {
     html += `
       <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
-        <b>${p.name}</b> (${p.packer || ''})<br>
-        Frozen/Fresh: ${p.frozen_fresh || ''}<br>
-        Box Weight: ${p.box_weight || ''}<br>
-        Available: <b>${p.available}</b><br>
-        Allocated: ${p.allocated}<br>
-        On Hand: ${p.on_hand}<br>
-        Next Exp: ${p.next_exp || '-'}
+        <b>${item.name || ''}</b><br>
+        On Hand: <b>${Number(item.qty_on_hand || 0)}</b><br>
+        Allocated: ${Number(item.qty_allocated || 0)}<br>
+        Available: <b>${Number(item.available || 0)}</b><br>
+        On Order: ${Number(item.on_order || 0)}<br>
+        Box Weight: ${item.box_weight || '-'}<br>
+        Type: ${item.frozen_fresh || '-'}<br>
+        Next Expiration: ${item.next_expiration || '-'}
       </div>
     `;
   });
 
-  document.getElementById('inventory').innerHTML = html;
+  document.getElementById('inventory').innerHTML = html || 'No inventory found';
 }
 
 loadInventory();
