@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Commission Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>COMMISSION REPORT</h2>
+
+<div id="report">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadReport() {
+
+  let { data } = await supabase
+    .from('order_items')
+    .select('qty_boxes, price, products(cost), orders(salesperson)')
+    .order('id', { ascending: false });
+
+  let salesByPerson = {};
+
+  data.forEach(item => {
+
+    let salesperson = item.orders ? item.orders.salesperson : "Unknown";
+
+    let sale = item.price * item.qty_boxes;
+    let cost = item.products.cost * item.qty_boxes;
+    let margin = sale - cost;
+
+    let commission = margin * 0.10; // 10% commission
+
+    if(!salesByPerson[salesperson]){
+      salesByPerson[salesperson] = {
+        sales: 0,
+        margin: 0,
+        commission: 0
+      };
+    }
+
+    salesByPerson[salesperson].sales += sale;
+    salesByPerson[salesperson].margin += margin;
+    salesByPerson[salesperson].commission += commission;
+  });
+
+  let html = "";
+
+  for (let person in salesByPerson){
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+        <b>${person}</b><br>
+        Sales: $${salesByPerson[person].sales.toFixed(2)}<br>
+        Margin: $${salesByPerson[person].margin.toFixed(2)}<br>
+        Commission: $${salesByPerson[person].commission.toFixed(2)}
+      </div>
+    `;
+  }
+
+  document.getElementById('report').innerHTML = html;
+}
+
+loadReport();
+</script>
+
+</body>
+</html>
