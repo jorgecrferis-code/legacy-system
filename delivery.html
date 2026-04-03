@@ -2,53 +2,95 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Legacy - Delivery</title>
+  <title>Delivery</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
-<h2>OUT FOR DELIVERY</h2>
+<h2>DELIVERY</h2>
 
 <div id="orders">Loading...</div>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function loadOrders() {
-  let { data } = await supabase
+  let { data, error } = await supabase
     .from('orders')
     .select('*, customers(customer_name)')
-    .eq('status', 'out_delivery');
+    .in('status', ['loaded', 'out_delivery'])
+    .order('id', { ascending: false });
 
-  let html = "";
+  if (error) {
+    document.getElementById('orders').innerHTML = error.message;
+    return;
+  }
 
-  data.forEach(order => {
+  let html = '';
+
+  (data || []).forEach(order => {
     html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
         <b>Order #${order.id}</b><br>
-        Customer: ${order.customers ? order.customers.customer_name : ''}<br><br>
-        <button onclick="deliverOrder(${order.id})">DELIVERED</button>
+        Customer: ${order.customers ? order.customers.customer_name : '-'}<br>
+        Status: ${order.status || '-'}<br><br>
+
+        <button onclick="sendOut(${order.id})" style="margin-right:10px;">
+          OUT FOR DELIVERY
+        </button>
+
+        <button onclick="deliverOrder(${order.id})">
+          DELIVERED + CREATE INVOICE
+        </button>
       </div>
     `;
   });
 
-  document.getElementById('orders').innerHTML = html;
+  document.getElementById('orders').innerHTML = html || 'No delivery orders found';
 }
 
-async function deliverOrder(orderId) {
-  await supabase
+async function sendOut(orderId) {
+  let { error } = await supabase
     .from('orders')
-    .update({ status: 'delivered' })
+    .update({ status: 'out_delivery' })
     .eq('id', orderId);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
   loadOrders();
 }
 
+async function deliverOrder(orderId) {
+  let { error: updateError } = await supabase
+    .from('orders')
+    .update({ status: 'delivered' })
+    .eq('id', orderId);
+
+  if (updateError) {
+    alert(updateError.message);
+    return;
+  }
+
+  let { error: rpcError } = await supabase.rpc('create_invoice_from_order', {
+    p_order_id: orderId
+  });
+
+  if (rpcError) {
+    alert(rpcError.message);
+    return;
+  }
+
+  alert('Order delivered and invoice created');
+  loadOrders();
+}
 loadOrders();
 </script>
 
