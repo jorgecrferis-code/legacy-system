@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Suppliers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>SUPPLIERS</h2>
+
+<h3>Add Supplier</h3>
+
+<input type="text" id="name" placeholder="Supplier Name"><br><br>
+<input type="text" id="contact" placeholder="Contact Name"><br><br>
+<input type="text" id="phone" placeholder="Phone"><br><br>
+<input type="text" id="email" placeholder="Email"><br><br>
+<input type="text" id="address" placeholder="Address"><br><br>
+<input type="text" id="city" placeholder="City"><br><br>
+<input type="text" id="state" placeholder="State"><br><br>
+<input type="text" id="zip" placeholder="Zip"><br><br>
+
+<button onclick="addSupplier()">ADD SUPPLIER</button>
+
+<hr>
+
+<h3>Supplier List</h3>
+<div id="supplierList">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function addSupplier() {
+  let name = document.getElementById('name').value;
+  let contact = document.getElementById('contact').value;
+  let phone = document.getElementById('phone').value;
+  let email = document.getElementById('email').value;
+  let address = document.getElementById('address').value;
+  let city = document.getElementById('city').value;
+  let state = document.getElementById('state').value;
+  let zip = document.getElementById('zip').value;
+
+  await supabase.from('suppliers').insert([
+    {
+      supplier_name: name,
+      contact_name: contact,
+      phone: phone,
+      email: email,
+      address: address,
+      city: city,
+      state: state,
+      zip: zip
+    }
+  ]);
+
+  alert("Supplier Added");
+  loadSuppliers();
+}
+
+async function loadSuppliers() {
+  let { data } = await supabase
+    .from('suppliers')
+    .select('*')
+    .order('supplier_name');
+
+  let html = "";
+
+  data.forEach(s => {
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+        <b>${s.supplier_name}</b><br>
+        Contact: ${s.contact_name}<br>
+        Phone: ${s.phone}<br>
+        Email: ${s.email}
+      </div>
+    `;
+  });
+
+  document.getElementById('supplierList').innerHTML = html;
+}
+
+loadSuppliers();
+</script>
+
+</body>
+</html>
