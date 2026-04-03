@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Sales Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>SALES REPORT</h2>
+
+<label>Start Date:</label>
+<input type="date" id="startDate">
+
+<label>End Date:</label>
+<input type="date" id="endDate">
+
+<button onclick="loadReport()">Load Report</button>
+
+<br><br>
+
+<div id="report">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadReport() {
+
+  let start = document.getElementById('startDate').value;
+  let end = document.getElementById('endDate').value;
+
+  let query = supabase
+    .from('order_items')
+    .select('qty_boxes, products(name), orders(created_at, customers(customer_name))')
+    .order('id', { ascending: false });
+
+  if(start && end){
+    query = query.gte('orders.created_at', start)
+                 .lte('orders.created_at', end);
+  }
+
+  let { data } = await query;
+
+  let html = "";
+  let total = 0;
+
+  data.forEach(item => {
+    total += Number(item.qty_boxes);
+
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+        Product: ${item.products ? item.products.name : ''}<br>
+        Customer: ${item.orders && item.orders.customers ? item.orders.customers.customer_name : ''}<br>
+        Qty Boxes: ${item.qty_boxes}<br>
+        Date: ${item.orders ? item.orders.created_at : ''}
+      </div>
+    `;
+  });
+
+  html += `<h3>Total Boxes Sold: ${total}</h3>`;
+
+  document.getElementById('report').innerHTML = html;
+}
+
+loadReport();
+</script>
+
+</body>
+</html>
