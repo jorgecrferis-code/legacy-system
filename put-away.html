@@ -11,24 +11,16 @@
 
 <h2>PUT AWAY</h2>
 
-<input type="text" id="productSearch" placeholder="Search product..." 
-style="width:100%; padding:10px;" onkeyup="searchProducts()">
+<input id="product_id" placeholder="Product ID"><br><br>
+<input id="lot" placeholder="Lot"><br><br>
+<input id="exp" placeholder="Expiration"><br><br>
+<input id="qty" placeholder="Qty"><br><br>
+<input id="bin_id" placeholder="Bin ID"><br><br>
 
-<div id="productList"></div>
+<button onclick="putAway()">Put Away</button>
 
-<br>
-
-<label>Bin:</label>
-<select id="bin"></select>
-
-<br><br>
-
-<label>Qty Boxes:</label>
-<input type="number" id="qty">
-
-<br><br>
-
-<button onclick="putAway()">PUT AWAY</button>
+<h2>PUT AWAY HISTORY</h2>
+<div id="putaway_list">Loading...</div>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -36,63 +28,48 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let selectedProduct = null;
+async function putAway(){
+  const product_id = document.getElementById('product_id').value;
+  const lot = document.getElementById('lot').value;
+  const exp = document.getElementById('exp').value;
+  const qty = document.getElementById('qty').value;
+  const bin_id = document.getElementById('bin_id').value;
 
-async function loadBins() {
-  let { data } = await supabase.from('bins').select('*').order('bin_code');
+  await supabase.from('put_away').insert([{
+    product_id,
+    lot,
+    expiration_date: exp,
+    qty,
+    bin_id
+  }]);
 
-  let select = document.getElementById('bin');
-  select.innerHTML = "";
-
-  data.forEach(b => {
-    select.innerHTML += `<option value="${b.id}">${b.bin_code}</option>`;
-  });
+  alert('Put Away Done');
+  loadPutAway();
 }
 
-async function searchProducts() {
-  let search = document.getElementById('productSearch').value;
-
+async function loadPutAway(){
   let { data } = await supabase
-    .from('products')
+    .from('put_away')
     .select('*')
-    .ilike('name', '%' + search + '%')
-    .limit(10);
+    .order('created_at', { ascending:false });
 
-  let html = "";
+  let html = '';
 
   data.forEach(p => {
     html += `
-      <div style="border:1px solid #ccc; padding:10px; margin:5px;">
-        ${p.name}
-        <button onclick="selectProduct(${p.id})">Select</button>
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
+        Product: ${p.product_id}<br>
+        Qty: ${p.qty}<br>
+        Bin: ${p.bin_id}<br>
+        Lot: ${p.lot}
       </div>
     `;
   });
 
-  document.getElementById('productList').innerHTML = html;
+  document.getElementById('putaway_list').innerHTML = html;
 }
 
-function selectProduct(id) {
-  selectedProduct = id;
-  alert("Product selected");
-}
-
-async function putAway() {
-  let bin = document.getElementById('bin').value;
-  let qty = document.getElementById('qty').value;
-
-  await supabase.from('inventory_by_bin').insert([
-    {
-      product_id: selectedProduct,
-      bin_id: bin,
-      qty: qty
-    }
-  ]);
-
-  alert("Put Away Done");
-}
-
-loadBins();
+loadPutAway();
 </script>
 
 </body>
