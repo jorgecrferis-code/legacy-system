@@ -2,77 +2,57 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Picking</title>
+  <title>Legacy - Picking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body style="font-family: Arial; padding:20px;">
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
 <h2>PICKING</h2>
 
-<div id="items">Loading items...</div>
+<div id="items">Loading...</div>
 
 <br>
-<button id="finishBtn" onclick="finishPicking()" disabled>FINISH PICKING</button>
+<button onclick="finishPicking()">FINISH PICKING</button>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
 
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const urlParams = new URLSearchParams(window.location.search);
-const order_id = urlParams.get("order_id");
+const orderId = urlParams.get('order_id');
 
 async function loadItems() {
-  const { data, error } = await db
-    .from("order_items")
-    .select("*")
-    .eq("order_id", order_id);
-
-  if(error){
-    document.getElementById("items").innerHTML = error.message;
-    return;
-  }
+  let { data, error } = await supabase
+    .from('order_items')
+    .select('*, products(name)')
+    .eq('order_id', orderId);
 
   let html = "";
-  let allPicked = true;
 
   data.forEach(item => {
-    if(!item.picked) allPicked = false;
-
     html += `
-      <div style="margin:10px;padding:10px;border:1px solid #ccc;">
-        <input type="checkbox"
-          ${item.picked ? "checked" : ""}
-          onchange="togglePicked(${item.id}, this.checked)">
-        ${item.product} - Qty: ${item.qty}
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+        ${item.products ? item.products.name : ''}
+        <br>
+        Qty Boxes: ${item.qty_boxes}
       </div>
     `;
   });
 
-  document.getElementById("items").innerHTML = html;
-
-  if(allPicked){
-    document.getElementById("finishBtn").disabled = false;
-  }
+  document.getElementById('items').innerHTML = html;
 }
 
-async function togglePicked(item_id, checked){
-  await db
-    .from("order_items")
-    .update({ picked: checked })
-    .eq("id", item_id);
+async function finishPicking() {
+  await supabase
+    .from('orders')
+    .update({ status: 'packing' })
+    .eq('id', orderId);
 
-  loadItems();
-}
-
-async function finishPicking(){
-  await db
-    .from("orders")
-    .update({ status: "PACKING" })
-    .eq("id", order_id);
-
+  alert("Picking Finished");
   window.location.href = "waiting-picking.html";
 }
 
