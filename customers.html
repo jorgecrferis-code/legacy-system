@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Customers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>CUSTOMERS</h2>
+
+<h3>Add Customer</h3>
+
+<input type="text" id="name" placeholder="Customer Name"><br><br>
+<input type="text" id="address" placeholder="Address"><br><br>
+<input type="text" id="city" placeholder="City"><br><br>
+<input type="text" id="state" placeholder="State"><br><br>
+<input type="text" id="zip" placeholder="Zip"><br><br>
+<input type="text" id="phone" placeholder="Phone"><br><br>
+<input type="text" id="email" placeholder="Email"><br><br>
+<input type="text" id="priceTable" placeholder="Price Table"><br><br>
+
+<button onclick="addCustomer()">ADD CUSTOMER</button>
+
+<hr>
+
+<h3>Customer List</h3>
+<div id="customerList">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function addCustomer() {
+  let name = document.getElementById('name').value;
+  let address = document.getElementById('address').value;
+  let city = document.getElementById('city').value;
+  let state = document.getElementById('state').value;
+  let zip = document.getElementById('zip').value;
+  let phone = document.getElementById('phone').value;
+  let email = document.getElementById('email').value;
+  let priceTable = document.getElementById('priceTable').value;
+
+  await supabase.from('customers').insert([
+    {
+      customer_name: name,
+      address: address,
+      city: city,
+      state: state,
+      zip: zip,
+      phone: phone,
+      email: email,
+      price_table: priceTable
+    }
+  ]);
+
+  alert("Customer Added");
+  loadCustomers();
+}
+
+async function loadCustomers() {
+  let { data } = await supabase
+    .from('customers')
+    .select('*')
+    .order('customer_name');
+
+  let html = "";
+
+  data.forEach(c => {
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+        <b>${c.customer_name}</b><br>
+        ${c.address} - ${c.city}<br>
+        Phone: ${c.phone}<br>
+        Price Table: ${c.price_table}
+      </div>
+    `;
+  });
+
+  document.getElementById('customerList').innerHTML = html;
+}
+
+loadCustomers();
+</script>
+
+</body>
+</html>
