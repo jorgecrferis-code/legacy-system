@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Inventory Count</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>INVENTORY COUNT</h2>
+
+<input id="product_id" placeholder="Product ID"><br><br>
+<input id="bin_id" placeholder="Bin ID"><br><br>
+<input id="system_qty" placeholder="System Qty"><br><br>
+<input id="counted_qty" placeholder="Counted Qty"><br><br>
+
+<button onclick="saveCount()">Save Count</button>
+
+<h2>COUNT HISTORY</h2>
+<div id="counts">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function saveCount(){
+  const product_id = document.getElementById('product_id').value;
+  const bin_id = document.getElementById('bin_id').value;
+  const system_qty = document.getElementById('system_qty').value;
+  const counted_qty = document.getElementById('counted_qty').value;
+  const difference = counted_qty - system_qty;
+
+  await supabase.from('inventory_count').insert([{
+    product_id,
+    bin_id,
+    system_qty,
+    counted_qty,
+    difference
+  }]);
+
+  alert('Count Saved');
+  loadCounts();
+}
+
+async function loadCounts(){
+  let { data } = await supabase
+    .from('inventory_count')
+    .select('*')
+    .order('counted_at', { ascending:false });
+
+  let html = '';
+
+  data.forEach(c => {
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
+        Product: ${c.product_id}<br>
+        Bin: ${c.bin_id}<br>
+        System: ${c.system_qty}<br>
+        Counted: ${c.counted_qty}<br>
+        Difference: <b>${c.difference}</b>
+      </div>
+    `;
+  });
+
+  document.getElementById('counts').innerHTML = html;
+}
+
+loadCounts();
+</script>
+
+</body>
+</html>
