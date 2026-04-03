@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Expiration Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>EXPIRATION REPORT</h2>
+
+<div id="report">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadReport() {
+  let { data } = await supabase
+    .from('inventory_by_bin')
+    .select('qty, lot, expiration_date, products(name), bins(bin_code)')
+    .order('expiration_date', { ascending: true });
+
+  let html = "";
+
+  data.forEach(item => {
+    let expColor = "";
+    if(item.expiration_date){
+      let exp = new Date(item.expiration_date);
+      let today = new Date();
+      let diff = (exp - today) / (1000 * 60 * 60 * 24);
+
+      if(diff < 7) expColor = "red";
+      else if(diff < 30) expColor = "orange";
+      else expColor = "green";
+    }
+
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+        <b>${item.products ? item.products.name : ''}</b><br>
+        Bin: ${item.bins ? item.bins.bin_code : ''}<br>
+        Qty: ${item.qty}<br>
+        Lot: ${item.lot || '-'}<br>
+        Exp: <span style="color:${expColor}">${item.expiration_date || '-'}</span>
+      </div>
+    `;
+  });
+
+  document.getElementById('report').innerHTML = html;
+}
+
+loadReport();
+</script>
+
+</body>
+</html>
