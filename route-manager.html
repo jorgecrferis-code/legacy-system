@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Route Manager</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Route Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
@@ -13,27 +13,20 @@
 
 <h3>Create Route</h3>
 
-<label>Route Name:</label>
-<input type="text" id="routeName">
+<input id="route_name" placeholder="Route Name" style="width:100%; padding:10px;"><br><br>
+<input id="driver_name" placeholder="Driver Name" style="width:100%; padding:10px;"><br><br>
+<input id="route_date" type="date" style="width:100%; padding:10px;"><br><br>
 
-<br><br>
+<button onclick="createRoute()" style="padding:12px 20px;">CREATE ROUTE</button>
 
-<label>Delivery Date:</label>
-<input type="date" id="deliveryDate">
+<hr>
 
-<br><br>
+<h3>Add Order to Route</h3>
 
-<label>Driver:</label>
-<input type="text" id="driver">
+<input id="route_id" placeholder="Route ID" style="width:100%; padding:10px;"><br><br>
+<input id="order_id" placeholder="Order ID" style="width:100%; padding:10px;"><br><br>
 
-<br><br>
-
-<label>Truck:</label>
-<input type="text" id="truck">
-
-<br><br>
-
-<button onclick="createRoute()">Create Route</button>
+<button onclick="addOrderToRoute()" style="padding:12px 20px;">ADD ORDER</button>
 
 <hr>
 
@@ -46,45 +39,97 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function createRoute() {
-  let name = document.getElementById('routeName').value;
-  let date = document.getElementById('deliveryDate').value;
-  let driver = document.getElementById('driver').value;
-  let truck = document.getElementById('truck').value;
+async function createRoute(){
+  const route_name = document.getElementById('route_name').value;
+  const driver_name = document.getElementById('driver_name').value;
+  const route_date = document.getElementById('route_date').value;
 
-  await supabase.from('routes').insert([
-    {
-      route_name: name,
-      delivery_date: date,
-      driver: driver,
-      truck: truck
-    }
-  ]);
+  let { error } = await supabase.from('routes').insert([{
+    route_name,
+    driver_name,
+    route_date,
+    status: 'open'
+  }]);
 
-  alert("Route Created");
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+  alert('Route created');
   loadRoutes();
 }
 
-async function loadRoutes() {
-  let { data } = await supabase
+async function addOrderToRoute(){
+  const route_id = document.getElementById('route_id').value;
+  const order_id = document.getElementById('order_id').value;
+
+  let { error: linkError } = await supabase.from('route_orders').insert([{
+    route_id,
+    order_id
+  }]);
+
+  if(linkError){
+    alert(linkError.message);
+    return;
+  }
+
+  await supabase
+    .from('orders')
+    .update({ status: 'routed' })
+    .eq('id', order_id);
+
+  alert('Order added to route');
+  loadRoutes();
+}
+
+async function closeRoute(routeId){
+  let { error } = await supabase
+    .from('routes')
+    .update({ status: 'closed' })
+    .eq('id', routeId);
+
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+  loadRoutes();
+}
+
+async function loadRoutes(){
+  let { data, error } = await supabase
     .from('routes')
     .select('*')
-    .order('delivery_date', { ascending: false });
+    .order('route_date', { ascending:false });
 
-  let html = "";
+  if(error){
+    document.getElementById('routes').innerHTML = error.message;
+    return;
+  }
 
-  data.forEach(route => {
+  let html = '';
+
+  for (let r of (data || [])) {
+    let { data: routeItems } = await supabase
+      .from('route_orders')
+      .select('*')
+      .eq('route_id', r.id);
+
     html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
-        <b>${route.route_name}</b><br>
-        Date: ${route.delivery_date}<br>
-        Driver: ${route.driver}<br>
-        Truck: ${route.truck}<br>
+      <div style="background:white; border:1px solid #ddd; padding:15px; margin-bottom:10px; border-radius:8px;">
+        <b>Route #${r.id}</b><br>
+        Name: ${r.route_name || '-'}<br>
+        Driver: ${r.driver_name || '-'}<br>
+        Date: ${r.route_date || '-'}<br>
+        Status: <b>${r.status || '-'}</b><br>
+        Orders in Route: ${(routeItems || []).length}<br><br>
+        <button onclick="closeRoute(${r.id})">CLOSE ROUTE</button>
       </div>
     `;
-  });
+  }
 
-  document.getElementById('routes').innerHTML = html;
+  document.getElementById('routes').innerHTML = html || 'No routes found';
 }
 
 loadRoutes();
