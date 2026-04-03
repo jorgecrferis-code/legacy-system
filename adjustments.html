@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Inventory Adjustment</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>INVENTORY ADJUSTMENT</h2>
+
+<input type="text" id="productSearch" placeholder="Search product..." 
+style="width:100%; padding:10px;" onkeyup="searchProducts()">
+
+<div id="productList"></div>
+
+<br>
+
+<label>Adjustment Qty (+ or -):</label>
+<input type="number" id="qty">
+
+<br><br>
+
+<button onclick="adjustInventory()">ADJUST INVENTORY</button>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let selectedProduct = null;
+
+async function searchProducts() {
+  let search = document.getElementById('productSearch').value;
+
+  let { data } = await supabase
+    .from('products')
+    .select('*')
+    .ilike('name', '%' + search + '%')
+    .limit(10);
+
+  let html = "";
+
+  data.forEach(p => {
+    html += `
+      <div style="border:1px solid #ccc; padding:10px; margin:5px;">
+        ${p.name}
+        <button onclick="selectProduct(${p.id})">Select</button>
+      </div>
+    `;
+  });
+
+  document.getElementById('productList').innerHTML = html;
+}
+
+function selectProduct(id) {
+  selectedProduct = id;
+  alert("Product selected");
+}
+
+async function adjustInventory() {
+
+  let qty = document.getElementById('qty').value;
+
+  await supabase
+    .from('inventory')
+    .update({ qty_on_hand: supabase.raw('qty_on_hand + ' + qty) })
+    .eq('product_id', selectedProduct);
+
+  await supabase.from('inventory_movements').insert([
+    {
+      product_id: selectedProduct,
+      movement_type: 'ADJUSTMENT',
+      qty: qty
+    }
+  ]);
+
+  alert("Inventory adjusted");
+}
+</script>
+
+</body>
+</html>
