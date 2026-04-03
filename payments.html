@@ -12,15 +12,18 @@
 <h2>RECEIVE PAYMENT</h2>
 
 Invoice ID:<br>
-<input type="number" id="invoice_id"><br><br>
+<input type="number" id="invoice_id" style="width:100%; padding:10px;"><br><br>
 
 Amount:<br>
-<input type="number" id="amount"><br><br>
+<input type="number" id="amount" style="width:100%; padding:10px;"><br><br>
 
 Method:<br>
-<input type="text" id="method"><br><br>
+<input type="text" id="method" style="width:100%; padding:10px;"><br><br>
 
-<button onclick="savePayment()">SAVE PAYMENT</button>
+Reference:<br>
+<input type="text" id="reference" style="width:100%; padding:10px;"><br><br>
+
+<button onclick="savePayment()" style="padding:12px 20px; font-size:16px;">SAVE PAYMENT</button>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -32,14 +35,42 @@ async function savePayment() {
   let invoice = document.getElementById('invoice_id').value;
   let amount = document.getElementById('amount').value;
   let method = document.getElementById('method').value;
+  let reference = document.getElementById('reference').value;
 
-  await supabase.from('payments').insert([{
+  if (!invoice || !amount) {
+    alert('Fill invoice and amount');
+    return;
+  }
+
+  let { data: invoiceData } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoice)
+    .single();
+
+  if (!invoiceData) {
+    alert('Invoice not found');
+    return;
+  }
+
+  let { error } = await supabase.from('payments').insert([{
+    customer_id: invoiceData.customer_id,
     invoice_id: invoice,
     amount: amount,
-    payment_method: method
+    payment_method: method,
+    reference: reference
   }]);
 
-  alert("Payment saved");
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert('Payment saved');
+  document.getElementById('invoice_id').value = '';
+  document.getElementById('amount').value = '';
+  document.getElementById('method').value = '';
+  document.getElementById('reference').value = '';
 }
 </script>
 
