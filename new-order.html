@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Legacy - New Order</title>
+  <title>New Order</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -11,12 +11,10 @@
 
 <h2>NEW ORDER</h2>
 
-<label>Select Customer:</label>
+<label>Customer:</label>
 <select id="customer"></select>
 
 <br><br>
-
-<h3>Add Product</h3>
 
 <input type="text" id="productSearch" placeholder="Search product..." onkeyup="searchProducts()">
 
@@ -30,7 +28,7 @@
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
+const SUPABASE_ANON_KEY = "SUA_ANON_AQUI";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -40,8 +38,6 @@ async function loadCustomers() {
   let { data } = await supabase.from('customers').select('*').order('customer_name');
 
   let select = document.getElementById('customer');
-  select.innerHTML = "";
-
   data.forEach(c => {
     select.innerHTML += `<option value="${c.id}">${c.customer_name}</option>`;
   });
@@ -77,7 +73,6 @@ function addItem(id, name) {
 
 function renderItems() {
   let html = "";
-
   orderItems.forEach((item, index) => {
     html += `
       <div>
@@ -87,7 +82,6 @@ function renderItems() {
       </div>
     `;
   });
-
   document.getElementById('orderItems').innerHTML = html;
 }
 
@@ -115,7 +109,6 @@ async function submitOrder() {
   }
 
   alert("Order Created!");
-  window.location.href = "product-search.html";
 }
 
 loadCustomers();
