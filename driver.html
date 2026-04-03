@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Driver Delivery</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>DRIVER DELIVERY</h2>
+
+<input id="driver" placeholder="Driver Name"><br><br>
+<button onclick="loadDeliveries()">Load My Route</button>
+
+<h2>DELIVERIES</h2>
+<div id="deliveries">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadDeliveries(){
+  const driver = document.getElementById('driver').value;
+
+  let { data } = await supabase
+    .from('deliveries')
+    .select('*')
+    .eq('driver', driver)
+    .eq('status', 'loaded');
+
+  let html = '';
+
+  data.forEach(d => {
+    html += `
+      <div style="background:white; padding:15px; margin-bottom:10px;">
+        Order: ${d.order_id}<br>
+        Customer: ${d.customer_name}<br>
+        Address: ${d.address}<br><br>
+        <button onclick="deliver(${d.id})">Delivered</button>
+      </div>
+    `;
+  });
+
+  document.getElementById('deliveries').innerHTML = html;
+}
+
+async function deliver(id){
+  await supabase
+    .from('deliveries')
+    .update({ status: 'delivered' })
+    .eq('id', id);
+
+  alert('Delivered');
+  loadDeliveries();
+}
+</script>
+
+</body>
+</html>
