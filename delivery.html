@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Legacy - Delivery</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>OUT FOR DELIVERY</h2>
+
+<div id="orders">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadOrders() {
+  let { data } = await supabase
+    .from('orders')
+    .select('*, customers(customer_name)')
+    .eq('status', 'out_delivery');
+
+  let html = "";
+
+  data.forEach(order => {
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+        <b>Order #${order.id}</b><br>
+        Customer: ${order.customers ? order.customers.customer_name : ''}<br><br>
+        <button onclick="deliverOrder(${order.id})">DELIVERED</button>
+      </div>
+    `;
+  });
+
+  document.getElementById('orders').innerHTML = html;
+}
+
+async function deliverOrder(orderId) {
+  await supabase
+    .from('orders')
+    .update({ status: 'delivered' })
+    .eq('id', orderId);
+
+  loadOrders();
+}
+
+loadOrders();
+</script>
+
+</body>
+</html>
