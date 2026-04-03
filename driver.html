@@ -2,17 +2,21 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Driver Delivery</title>
+  <title>Driver App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
-<h2>DRIVER DELIVERY</h2>
+<h2>DRIVER APP</h2>
 
-<input id="driver" placeholder="Driver Name"><br><br>
-<button onclick="loadDeliveries()">Load My Route</button>
+<label>Driver Name</label><br>
+<input id="driver" placeholder="Driver Name" style="width:100%; padding:10px;">
+
+<br><br>
+
+<button onclick="loadDeliveries()" style="padding:12px 20px; font-size:16px;">LOAD MY ROUTE</button>
 
 <h2>DELIVERIES</h2>
 <div id="deliveries">Loading...</div>
@@ -26,33 +30,45 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 async function loadDeliveries(){
   const driver = document.getElementById('driver').value;
 
-  let { data } = await supabase
+  let { data, error } = await supabase
     .from('deliveries')
     .select('*')
     .eq('driver', driver)
-    .eq('status', 'loaded');
+    .order('id', { ascending:false });
+
+  if(error){
+    document.getElementById('deliveries').innerHTML = error.message;
+    return;
+  }
 
   let html = '';
 
-  data.forEach(d => {
+  (data || []).forEach(d => {
     html += `
-      <div style="background:white; padding:15px; margin-bottom:10px;">
-        Order: ${d.order_id}<br>
-        Customer: ${d.customer_name}<br>
-        Address: ${d.address}<br><br>
-        <button onclick="deliver(${d.id})">Delivered</button>
+      <div style="background:white; padding:15px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+        Delivery ID: ${d.id}<br>
+        Order: ${d.order_id || '-'}<br>
+        Customer: ${d.customer_name || '-'}<br>
+        Address: ${d.address || '-'}<br>
+        Status: ${d.status || '-'}<br><br>
+        <button onclick="deliver(${d.id})">DELIVERED</button>
       </div>
     `;
   });
 
-  document.getElementById('deliveries').innerHTML = html;
+  document.getElementById('deliveries').innerHTML = html || 'No deliveries found';
 }
 
 async function deliver(id){
-  await supabase
+  let { error } = await supabase
     .from('deliveries')
     .update({ status: 'delivered' })
     .eq('id', id);
+
+  if(error){
+    alert(error.message);
+    return;
+  }
 
   alert('Delivered');
   loadDeliveries();
