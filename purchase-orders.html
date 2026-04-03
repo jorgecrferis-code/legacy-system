@@ -11,21 +11,21 @@
 
 <h2>PURCHASE ORDER</h2>
 
-<label>Supplier:</label>
-<input type="text" id="supplier">
+<input id="vendor" placeholder="Vendor"><br><br>
+<input id="expected_date" placeholder="Expected Date"><br><br>
 
-<br><br>
+<button onclick="createPO()">Create PO</button>
 
-<input type="text" id="productSearch" placeholder="Search product..." 
-style="width:100%; padding:10px;" onkeyup="searchProducts()">
+<h2>ADD ITEM TO PO</h2>
 
-<div id="productList"></div>
+<input id="po_id" placeholder="PO ID"><br><br>
+<input id="product_id" placeholder="Product ID"><br><br>
+<input id="qty" placeholder="Qty"><br><br>
 
-<h3>PO Items</h3>
-<div id="poItems"></div>
+<button onclick="addItem()">Add Item</button>
 
-<br>
-<button onclick="createPO()">CREATE PURCHASE ORDER</button>
+<h2>OPEN PURCHASE ORDERS</h2>
+<div id="po_list">Loading...</div>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -33,75 +33,56 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let poItems = [];
+async function createPO(){
+  const vendor = document.getElementById('vendor').value;
+  const expected_date = document.getElementById('expected_date').value;
 
-async function searchProducts() {
-  let search = document.getElementById('productSearch').value;
+  await supabase.from('purchase_orders').insert([{
+    vendor,
+    expected_date
+  }]);
 
+  alert('PO Created');
+  loadPO();
+}
+
+async function addItem(){
+  const po_id = document.getElementById('po_id').value;
+  const product_id = document.getElementById('product_id').value;
+  const qty = document.getElementById('qty').value;
+
+  await supabase.from('purchase_order_items').insert([{
+    po_id,
+    product_id,
+    qty_ordered: qty
+  }]);
+
+  alert('Item Added');
+}
+
+async function loadPO(){
   let { data } = await supabase
-    .from('products')
-    .select('*')
-    .ilike('name', '%' + search + '%')
-    .limit(10);
-
-  let html = "";
-
-  data.forEach(p => {
-    html += `
-      <div style="border:1px solid #ccc; padding:10px; margin:5px;">
-        ${p.name}
-        <button onclick="addItem(${p.id}, '${p.name}')">Add</button>
-      </div>
-    `;
-  });
-
-  document.getElementById('productList').innerHTML = html;
-}
-
-function addItem(id, name) {
-  poItems.push({ product_id: id, name: name, qty: 1 });
-  renderItems();
-}
-
-function renderItems() {
-  let html = "";
-  poItems.forEach((item, index) => {
-    html += `
-      <div>
-        ${item.name}
-        Qty:
-        <input type="number" value="${item.qty}" onchange="updateQty(${index}, this.value)">
-      </div>
-    `;
-  });
-  document.getElementById('poItems').innerHTML = html;
-}
-
-function updateQty(index, qty) {
-  poItems[index].qty = qty;
-}
-
-async function createPO() {
-  let supplier = document.getElementById('supplier').value;
-
-  let { data: po } = await supabase
     .from('purchase_orders')
-    .insert([{ supplier: supplier, status: 'open' }])
-    .select()
-    .single();
+    .select('*')
+    .order('id', { ascending:false });
 
-  for (let item of poItems) {
-    await supabase.from('purchase_order_items').insert([
-      {
-        po_id: po.id,
-        product_id: item.product_id,
-        qty: item.qty
-      }
-    ]);
-  }
+  let html = '';
 
-  alert("Purchase Order Created!");
+  data.forEach(po => {
+    html += `
+      <div style="background:white; padding:15px; margin-bottom:10px;">
+        PO: ${po.id}<br>
+        Vendor: ${po.vendor}<br>
+        Date: ${po.order_date}<br>
+        Status: ${po.status}
+      </div>
+    `;
+  });
+
+  document.getElementById('po_list').innerHTML = html;
 }
+
+loadPO();
 </script>
 
 </body>
