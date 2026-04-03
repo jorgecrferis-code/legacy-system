@@ -11,23 +11,79 @@
 
 <h2>PRODUCT SEARCH</h2>
 
-<input type="text" id="search" placeholder="Search product..." 
-style="width:100%; padding:10px; font-size:16px;" onkeyup="loadProducts()">
+<label>Customer:</label>
+<select id="customer" onchange="loadPriceTable()" style="width:100%; padding:10px;"></select>
 
 <br><br>
 
-<div id="products">Loading...</div>
+<input
+  type="text"
+  id="search"
+  placeholder="Search product..."
+  style="width:100%; padding:10px;"
+  onkeyup="searchProducts()"
+/>
+
+<div id="results" style="margin-top:20px;"></div>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "SUA_ANON_AQUI";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function loadProducts() {
+let customers = [];
+let selectedPriceTable = null;
+
+async function loadCustomers() {
+  let { data } = await supabase
+    .from('customers')
+    .select('*')
+    .order('customer_name');
+
+  customers = data;
+
+  let select = document.getElementById('customer');
+  select.innerHTML = '<option value="">Select customer</option>';
+
+  customers.forEach(c => {
+    select.innerHTML += `<option value="${c.id}">${c.customer_name}</option>`;
+  });
+}
+
+function loadPriceTable() {
+  let customerId = document.getElementById('customer').value;
+  let customer = customers.find(c => c.id == customerId);
+
+  if (customer) {
+    selectedPriceTable = customer.price_table;
+  }
+
+  searchProducts();
+}
+
+async function getPrice(productId) {
+  if (!selectedPriceTable) return 0;
+
+  let { data } = await supabase
+    .from('product_prices')
+    .select('*')
+    .eq('product_id', productId)
+    .eq('price_table', selectedPriceTable)
+    .limit(1);
+
+  if (!data || data.length == 0) return 0;
+
+  return Number(data[0].price_box || 0);
+}
+
+async function searchProducts() {
   let search = document.getElementById('search').value;
 
-  let query = supabase.from('product_search').select('*').order('name');
+  let query = supabase
+    .from('products')
+    .select('*')
+    .limit(20);
 
   if (search) {
     query = query.ilike('name', '%' + search + '%');
@@ -35,22 +91,37 @@ async function loadProducts() {
 
   let { data } = await query;
 
-  let html = "";
+  let html = '';
 
-  data.forEach(p => {
+  for (let p of data) {
+
+    let price = await getPrice(p.id);
+
+    let { data: inv } = await supabase
+      .from('inventory')
+      .select('*')
+      .eq('product_id', p.id)
+      .limit(1);
+
+    let available = inv && inv.length ? inv[0].available : 0;
+    let on_order = inv && inv.length ? inv[0].on_order : 0;
+
     html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
         <b>${p.name}</b><br>
-        Available: ${p.available}<br>
-        Next Exp: ${p.next_exp || '-'}
+        Price: $${price.toFixed(2)}<br>
+        Available: ${available}<br>
+        On Order: ${on_order}<br>
+        Box Weight: ${p.box_weight || '-'}<br>
+        Type: ${p.product_type || '-'}<br>
       </div>
     `;
-  });
+  }
 
-  document.getElementById('products').innerHTML = html;
+  document.getElementById('results').innerHTML = html;
 }
 
-loadProducts();
+loadCustomers();
 </script>
 
 </body>
