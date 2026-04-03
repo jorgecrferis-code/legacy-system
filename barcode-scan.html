@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Barcode Scan</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>BARCODE SCAN</h2>
+
+<label>Scan Type</label><br>
+<select id="scan_type" style="width:100%; padding:10px;">
+  <option value="picking">Picking</option>
+  <option value="packing">Packing</option>
+  <option value="loading">Loading</option>
+  <option value="delivery">Delivery</option>
+  <option value="inventory">Inventory</option>
+</select>
+
+<br><br>
+
+<label>Order ID</label><br>
+<input id="order_id" placeholder="Order ID" style="width:100%; padding:10px;">
+
+<br><br>
+
+<label>Product ID</label><br>
+<input id="product_id" placeholder="Product ID" style="width:100%; padding:10px;">
+
+<br><br>
+
+<label>Barcode / SKU</label><br>
+<input id="code" placeholder="Scan here" style="width:100%; padding:14px; font-size:18px;">
+
+<br><br>
+
+<label>User</label><br>
+<input id="user_name" placeholder="User Name" style="width:100%; padding:10px;">
+
+<br><br>
+
+<button onclick="saveScan()" style="padding:14px 20px; font-size:16px;">SAVE SCAN</button>
+
+<h2>SCAN HISTORY</h2>
+<div id="scan_list">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function saveScan(){
+  const scan_type = document.getElementById('scan_type').value;
+  const order_id = document.getElementById('order_id').value || null;
+  const product_id = document.getElementById('product_id').value || null;
+  const code = document.getElementById('code').value;
+  const user_name = document.getElementById('user_name').value;
+
+  if(!code){
+    alert('Scan the barcode first');
+    return;
+  }
+
+  await supabase.from('barcode_scans').insert([{
+    scan_type,
+    order_id,
+    product_id,
+    code,
+    user_name
+  }]);
+
+  alert('Scan saved');
+
+  document.getElementById('code').value = '';
+  document.getElementById('code').focus();
+
+  loadScans();
+}
+
+async function loadScans(){
+  let { data, error } = await supabase
+    .from('barcode_scans')
+    .select('*')
+    .order('created_at', { ascending:false })
+    .limit(50);
+
+  if(error){
+    document.getElementById('scan_list').innerHTML = error.message;
+    return;
+  }
+
+  let html = '';
+
+  (data || []).forEach(s => {
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
+        <b>${s.scan_type}</b><br>
+        Code: ${s.code}<br>
+        Order: ${s.order_id || '-'}<br>
+        Product: ${s.product_id || '-'}<br>
+        User: ${s.user_name || '-'}<br>
+        Date: ${s.created_at}
+      </div>
+    `;
+  });
+
+  document.getElementById('scan_list').innerHTML = html;
+}
+
+document.getElementById('code').focus();
+loadScans();
+</script>
+
+</body>
+</html>
