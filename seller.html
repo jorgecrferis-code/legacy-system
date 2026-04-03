@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Seller App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>NEW ORDER</h2>
+
+<input id="customer_id" placeholder="Customer ID"><br><br>
+<input id="salesperson" placeholder="Salesperson"><br><br>
+
+<button onclick="createOrder()">Create Order</button>
+
+<h2>ADD PRODUCT</h2>
+
+<input id="order_id" placeholder="Order ID"><br><br>
+<input id="product_id" placeholder="Product ID"><br><br>
+<input id="price" placeholder="Price"><br><br>
+<input id="qty" placeholder="Qty"><br><br>
+
+<button onclick="addItem()">Add Item</button>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+
+const supabase = window.supabase.createClient(
+  "https://ougbokufspjduwepqepj.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ"
+);
+
+async function createOrder(){
+  const customer_id = document.getElementById('customer_id').value;
+  const salesperson = document.getElementById('salesperson').value;
+
+  let { data } = await supabase
+    .from('orders')
+    .insert([{ customer_id, salesperson }])
+    .select()
+    .single();
+
+  alert('Order Created ID: ' + data.id);
+}
+
+async function addItem(){
+  const order_id = document.getElementById('order_id').value;
+  const product_id = document.getElementById('product_id').value;
+  const price = document.getElementById('price').value;
+  const qty = document.getElementById('qty').value;
+  const total = price * qty;
+
+  await supabase.from('order_items').insert([{
+    order_id,
+    product_id,
+    price,
+    quantity: qty,
+    total
+  }]);
+
+  alert('Item Added');
+}
+</script>
+
+</body>
+</html>
