@@ -2,35 +2,32 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Waiting Picking</title>
+  <title>Legacy - Waiting Picking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body style="font-family: Arial; padding:20px;">
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
 <h2>WAITING PICKING</h2>
 
 <div id="orders">Loading...</div>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
 
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function loadOrders() {
-  let { data, error } = await db
-    .from("orders")
-    .select("*")
-    .eq("status", "WAITING");
+  let { data, error } = await supabase
+    .from('orders')
+    .select('*, customers(customer_name)')
+    .eq('status', 'new')
+    .order('id', { ascending: false });
 
-  if(error){
-    document.getElementById("orders").innerHTML = "Error: " + error.message;
-    return;
-  }
-
-  if(!data || data.length === 0){
-    document.getElementById("orders").innerHTML = "No waiting orders";
+  if (error) {
+    document.getElementById('orders').innerHTML = error.message;
     return;
   }
 
@@ -38,23 +35,24 @@ async function loadOrders() {
 
   data.forEach(order => {
     html += `
-      <div style="margin:10px;padding:10px;border:1px solid #ccc;">
-        Order #${order.id} - ${order.customer_name || ""}
-        <button onclick="openPick(${order.id})">OPEN PICK</button>
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
+        <b>Order #${order.id}</b><br>
+        Customer: ${order.customers ? order.customers.customer_name : ''}<br><br>
+        <button onclick="startPicking(${order.id})">START PICKING</button>
       </div>
     `;
   });
 
-  document.getElementById("orders").innerHTML = html;
+  document.getElementById('orders').innerHTML = html;
 }
 
-async function openPick(id){
-  await db
-    .from("orders")
-    .update({ status: "PICKING" })
-    .eq("id", id);
+async function startPicking(orderId) {
+  await supabase
+    .from('orders')
+    .update({ status: 'picking' })
+    .eq('id', orderId);
 
-  window.location.href = "picking.html?order_id=" + id;
+  window.location.href = "picking.html?order_id=" + orderId;
 }
 
 loadOrders();
