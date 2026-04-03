@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Margin Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>MARGIN REPORT</h2>
+
+<div id="report">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadReport() {
+
+  let { data } = await supabase
+    .from('order_items')
+    .select('qty_boxes, price, products(name, cost)')
+    .order('id', { ascending: false });
+
+  let html = "";
+  let totalSales = 0;
+  let totalCost = 0;
+
+  data.forEach(item => {
+
+    let sale = item.price * item.qty_boxes;
+    let cost = item.products.cost * item.qty_boxes;
+    let margin = sale - cost;
+
+    totalSales += sale;
+    totalCost += cost;
+
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+        Product: ${item.products.name}<br>
+        Qty: ${item.qty_boxes}<br>
+        Sale: $${sale.toFixed(2)}<br>
+        Cost: $${cost.toFixed(2)}<br>
+        Margin: $${margin.toFixed(2)}
+      </div>
+    `;
+  });
+
+  let totalMargin = totalSales - totalCost;
+
+  html += `
+    <h3>Total Sales: $${totalSales.toFixed(2)}</h3>
+    <h3>Total Cost: $${totalCost.toFixed(2)}</h3>
+    <h2>Total Margin: $${totalMargin.toFixed(2)}</h2>
+  `;
+
+  document.getElementById('report').innerHTML = html;
+}
+
+loadReport();
+</script>
+
+</body>
+</html>
