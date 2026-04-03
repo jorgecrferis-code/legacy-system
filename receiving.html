@@ -11,29 +11,16 @@
 
 <h2>RECEIVING</h2>
 
-<input type="text" id="productSearch" placeholder="Search product..." 
-style="width:100%; padding:10px;" onkeyup="searchProducts()">
+<input id="po_id" placeholder="PO ID"><br><br>
+<input id="product_id" placeholder="Product ID"><br><br>
+<input id="qty" placeholder="Qty Received"><br><br>
+<input id="lot" placeholder="Lot"><br><br>
+<input id="exp" placeholder="Expiration Date"><br><br>
 
-<div id="productList"></div>
+<button onclick="receive()">Receive</button>
 
-<br>
-
-<label>Lot:</label>
-<input type="text" id="lot">
-
-<br><br>
-
-<label>Expiration Date:</label>
-<input type="date" id="exp">
-
-<br><br>
-
-<label>Qty Boxes:</label>
-<input type="number" id="qty">
-
-<br><br>
-
-<button onclick="receiveProduct()">RECEIVE</button>
+<h2>RECEIVED ITEMS</h2>
+<div id="receiving_list">Loading...</div>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -41,61 +28,49 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let selectedProduct = null;
+async function receive(){
+  const po_id = document.getElementById('po_id').value;
+  const product_id = document.getElementById('product_id').value;
+  const qty = document.getElementById('qty').value;
+  const lot = document.getElementById('lot').value;
+  const exp = document.getElementById('exp').value;
 
-async function searchProducts() {
-  let search = document.getElementById('productSearch').value;
+  await supabase.from('receiving').insert([{
+    po_id,
+    product_id,
+    qty_received: qty,
+    lot,
+    expiration_date: exp
+  }]);
 
+  alert('Received');
+  loadReceiving();
+}
+
+async function loadReceiving(){
   let { data } = await supabase
-    .from('products')
+    .from('receiving')
     .select('*')
-    .ilike('name', '%' + search + '%')
-    .limit(10);
+    .order('received_at', { ascending:false });
 
-  let html = "";
+  let html = '';
 
-  data.forEach(p => {
+  data.forEach(r => {
     html += `
-      <div style="border:1px solid #ccc; padding:10px; margin:5px;">
-        ${p.name}
-        <button onclick="selectProduct(${p.id})">Select</button>
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
+        PO: ${r.po_id}<br>
+        Product: ${r.product_id}<br>
+        Qty: ${r.qty_received}<br>
+        Lot: ${r.lot}<br>
+        Exp: ${r.expiration_date}
       </div>
     `;
   });
 
-  document.getElementById('productList').innerHTML = html;
+  document.getElementById('receiving_list').innerHTML = html;
 }
 
-function selectProduct(id) {
-  selectedProduct = id;
-  alert("Product selected");
-}
-
-async function receiveProduct() {
-
-  let lot = document.getElementById('lot').value;
-  let exp = document.getElementById('exp').value;
-  let qty = document.getElementById('qty').value;
-
-  await supabase.from('inventory').insert([
-    {
-      product_id: selectedProduct,
-      lot: lot,
-      expiration_date: exp,
-      qty_on_hand: qty
-    }
-  ]);
-
-  await supabase.from('inventory_movements').insert([
-    {
-      product_id: selectedProduct,
-      movement_type: 'RECEIVING',
-      qty: qty
-    }
-  ]);
-
-  alert("Product Received!");
-}
+loadReceiving();
 </script>
 
 </body>
