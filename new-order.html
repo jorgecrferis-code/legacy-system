@@ -51,17 +51,12 @@ let selectedCustomer = null;
 let orderItems = [];
 
 async function loadCustomers() {
-  let { data, error } = await supabase
+  let { data } = await supabase
     .from('customers')
     .select('*')
     .order('customer_name');
 
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  customers = data || [];
+  customers = data;
 
   let select = document.getElementById('customer');
   select.innerHTML = '<option value="">Select customer</option>';
@@ -73,7 +68,7 @@ async function loadCustomers() {
 
 function customerChanged() {
   let customerId = document.getElementById('customer').value;
-  selectedCustomer = customers.find(c => String(c.id) === String(customerId)) || null;
+  selectedCustomer = customers.find(c => c.id == customerId);
 
   let info = document.getElementById('customerInfo');
 
@@ -83,95 +78,65 @@ function customerChanged() {
   }
 
   info.innerHTML = `
-    <b>${selectedCustomer.customer_name || ''}</b><br>
-    Address: ${selectedCustomer.address || ''} ${selectedCustomer.city || ''} ${selectedCustomer.state || ''}<br>
-    Phone: ${selectedCustomer.phone || '-'}<br>
-    Email: ${selectedCustomer.email || '-'}<br>
-    Price Table: <b>${selectedCustomer.price_table || '-'}</b>
+    <b>${selectedCustomer.customer_name}</b><br>
+    Price Table: <b>${selectedCustomer.price_table}</b>
   `;
 
   searchProducts();
 }
 
 async function getPriceForProduct(productId) {
+
   if (!selectedCustomer) return 0;
 
-  let customerPriceTableName = selectedCustomer.price_table || '';
+  let priceTable = selectedCustomer.price_table;
 
-  if (!customerPriceTableName) return 0;
-
-  let { data: tableData, error: tableError } = await supabase
-    .from('price_tables')
-    .select('*')
-    .eq('table_name', customerPriceTableName)
-    .limit(1);
-
-  if (tableError || !tableData || tableData.length === 0) {
-    return 0;
-  }
-
-  let tableId = tableData[0].id;
-
-  let { data: priceData, error: priceError } = await supabase
+  let { data } = await supabase
     .from('product_prices')
     .select('*')
     .eq('product_id', productId)
-    .eq('price_table_id', tableId)
+    .eq('price_table', priceTable)
     .limit(1);
 
-  if (priceError || !priceData || priceData.length === 0) {
-    return 0;
-  }
+  if (!data || data.length == 0) return 0;
 
-  return Number(priceData[0].price || 0);
+  return Number(data[0].price_box || 0);
 }
 
 async function searchProducts() {
   let search = document.getElementById('productSearch').value;
 
   if (!selectedCustomer) {
-    document.getElementById('productList').innerHTML = `
-      <div style="background:#fff3cd; border:1px solid #ffeeba; padding:15px; border-radius:8px;">
-        Select the customer first
-      </div>
-    `;
+    document.getElementById('productList').innerHTML = "Select customer first";
     return;
   }
 
   let query = supabase
     .from('products')
     .select('*')
-    .order('name')
     .limit(10);
 
   if (search) {
     query = query.ilike('name', '%' + search + '%');
   }
 
-  let { data, error } = await query;
-
-  if (error) {
-    document.getElementById('productList').innerHTML = error.message;
-    return;
-  }
+  let { data } = await query;
 
   let html = '';
 
-  for (let p of (data || [])) {
+  for (let p of data) {
     let price = await getPriceForProduct(p.id);
 
     html += `
       <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
-        <b>${p.name || ''}</b><br>
-        Packer: ${p.packer || '-'}<br>
-        Category: ${p.category || '-'}<br>
+        <b>${p.name}</b><br>
         Price: <b>$${price.toFixed(2)}</b><br><br>
-        <button onclick="addItem(${p.id}, '${(p.name || '').replace(/'/g, "\\'")}', ${price})">ADD</button>
+        <button onclick="addItem(${p.id}, '${p.name}', ${price})">ADD</button>
       </div>
     `;
   }
 
-  document.getElementById('productList').innerHTML = html || 'No products found';
+  document.getElementById('productList').innerHTML = html;
 }
 
 function addItem(id, name, price) {
@@ -184,7 +149,7 @@ function addItem(id, name, price) {
       product_id: id,
       name: name,
       qty: 1,
-      price: Number(price || 0)
+      price: price
     });
   }
 
@@ -192,14 +157,7 @@ function addItem(id, name, price) {
 }
 
 function updateQty(index, qty) {
-  qty = Number(qty);
-
-  if (qty <= 0 || isNaN(qty)) {
-    orderItems.splice(index, 1);
-  } else {
-    orderItems[index].qty = qty;
-  }
-
+  orderItems[index].qty = Number(qty);
   renderItems();
 }
 
@@ -210,87 +168,52 @@ function removeItem(index) {
 
 function renderItems() {
   let html = '';
-  let grandTotal = 0;
+  let total = 0;
 
   orderItems.forEach((item, index) => {
-    let lineTotal = Number(item.qty) * Number(item.price);
-    grandTotal += lineTotal;
+    let line = item.qty * item.price;
+    total += line;
 
     html += `
       <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
         <b>${item.name}</b><br>
-        Price: $${Number(item.price).toFixed(2)}<br>
+        Price: $${item.price}<br>
         Qty:
-        <input
-          type="number"
-          value="${item.qty}"
-          min="1"
-          onchange="updateQty(${index}, this.value)"
-          style="width:80px; padding:5px; margin-left:8px;"
-        >
-        <br><br>
-        Line Total: <b>$${lineTotal.toFixed(2)}</b><br><br>
+        <input type="number" value="${item.qty}" onchange="updateQty(${index}, this.value)">
+        <br>
+        Line Total: $${line.toFixed(2)}
+        <br>
         <button onclick="removeItem(${index})">REMOVE</button>
       </div>
     `;
   });
 
-  document.getElementById('orderItems').innerHTML = html || 'No items added';
-  document.getElementById('grandTotal').innerText = 'Grand Total: $' + grandTotal.toFixed(2);
+  document.getElementById('orderItems').innerHTML = html;
+  document.getElementById('grandTotal').innerText = "Grand Total: $" + total.toFixed(2);
 }
 
 async function submitOrder() {
-  if (!selectedCustomer) {
-    alert('Select a customer first');
-    return;
-  }
 
-  if (orderItems.length === 0) {
-    alert('Add at least one product');
-    return;
-  }
-
-  let user = null;
-  try {
-    user = JSON.parse(localStorage.getItem('user') || 'null');
-  } catch (e) {
-    user = null;
-  }
-
-  let salesperson = user && user.name ? user.name : null;
-
-  let { data: order, error: orderError } = await supabase
+  let { data: order } = await supabase
     .from('orders')
     .insert([{
       customer_id: selectedCustomer.id,
-      status: 'new',
-      salesperson: salesperson
+      status: 'new'
     }])
     .select()
     .single();
 
-  if (orderError) {
-    alert(orderError.message);
-    return;
-  }
-
   for (let item of orderItems) {
-    let total = Number(item.qty) * Number(item.price);
 
-    let { error: itemError } = await supabase
+    await supabase
       .from('order_items')
       .insert([{
         order_id: order.id,
         product_id: item.product_id,
         qty_boxes: item.qty,
         price: item.price,
-        total: total
+        total: item.qty * item.price
       }]);
-
-    if (itemError) {
-      alert(itemError.message);
-      return;
-    }
 
     await supabase.rpc('allocate_inventory', {
       p_product_id: item.product_id,
@@ -299,8 +222,8 @@ async function submitOrder() {
     });
   }
 
-  alert('Order Created Successfully!');
-  window.location.href = 'waiting-picking.html';
+  alert("Order Created!");
+  window.location.href = "waiting-picking.html";
 }
 
 loadCustomers();
