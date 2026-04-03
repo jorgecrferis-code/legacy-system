@@ -11,7 +11,7 @@
 
 <h2>COMMISSION REPORT</h2>
 
-<div id="report">Loading...</div>
+<div id="commissions">Loading...</div>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -19,55 +19,29 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function loadReport() {
-
+async function loadCommission(){
   let { data } = await supabase
-    .from('order_items')
-    .select('qty_boxes, price, products(cost), orders(salesperson)')
-    .order('id', { ascending: false });
+    .from('commission_report')
+    .select('*');
 
-  let salesByPerson = {};
+  let html = '';
 
-  data.forEach(item => {
-
-    let salesperson = item.orders ? item.orders.salesperson : "Unknown";
-
-    let sale = item.price * item.qty_boxes;
-    let cost = item.products.cost * item.qty_boxes;
-    let margin = sale - cost;
-
-    let commission = margin * 0.10; // 10% commission
-
-    if(!salesByPerson[salesperson]){
-      salesByPerson[salesperson] = {
-        sales: 0,
-        margin: 0,
-        commission: 0
-      };
-    }
-
-    salesByPerson[salesperson].sales += sale;
-    salesByPerson[salesperson].margin += margin;
-    salesByPerson[salesperson].commission += commission;
-  });
-
-  let html = "";
-
-  for (let person in salesByPerson){
+  data.forEach(c => {
     html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
-        <b>${person}</b><br>
-        Sales: $${salesByPerson[person].sales.toFixed(2)}<br>
-        Margin: $${salesByPerson[person].margin.toFixed(2)}<br>
-        Commission: $${salesByPerson[person].commission.toFixed(2)}
+      <div style="background:white; padding:15px; margin-bottom:10px;">
+        Salesperson: ${c.salesperson}<br>
+        Order: ${c.order_id}<br>
+        Customer: ${c.customer_name}<br>
+        Revenue: $${Number(c.revenue).toFixed(2)}<br>
+        Commission: <b>$${Number(c.commission).toFixed(2)}</b>
       </div>
     `;
-  }
+  });
 
-  document.getElementById('report').innerHTML = html;
+  document.getElementById('commissions').innerHTML = html;
 }
 
-loadReport();
+loadCommission();
 </script>
 
 </body>
