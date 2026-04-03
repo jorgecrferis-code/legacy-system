@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Inventory by Bin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>INVENTORY BY BIN</h2>
+
+<input type="text" id="search" placeholder="Search product..." 
+style="width:100%; padding:10px;" onkeyup="loadInventory()">
+
+<br><br>
+
+<div id="inventory">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadInventory() {
+  let search = document.getElementById('search').value;
+
+  let query = supabase
+    .from('inventory_by_bin')
+    .select('qty, lot, expiration_date, products(name), bins(bin_code)')
+    .order('qty', { ascending: false });
+
+  let { data } = await query;
+
+  let html = "";
+
+  data.forEach(item => {
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+        <b>${item.products ? item.products.name : ''}</b><br>
+        Bin: ${item.bins ? item.bins.bin_code : ''}<br>
+        Qty: ${item.qty}<br>
+        Lot: ${item.lot || '-'}<br>
+        Exp: ${item.expiration_date || '-'}
+      </div>
+    `;
+  });
+
+  document.getElementById('inventory').innerHTML = html;
+}
+
+loadInventory();
+</script>
+
+</body>
+</html>
