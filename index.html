@@ -10,83 +10,73 @@
 
 <script>
 let user = localStorage.getItem("user");
+let role = localStorage.getItem("role");
+
 if(!user){
   window.location.href = "login.html";
 }
 </script>
 
 <h1>LEGACY SYSTEM</h1>
+<h3 id="welcome"></h3>
 
-<h3>DASHBOARD</h3>
-<button onclick="go('dashboard.html')">Dashboard</button>
-
-<br><br>
+<script>
+document.getElementById('welcome').innerText =
+  "Welcome " + localStorage.getItem("user") +
+  " (" + localStorage.getItem("role") + ")";
+</script>
 
 <h3>SALES</h3>
-<button onclick="go('seller.html')">Seller App</button>
-<button onclick="go('product-search.html')">Product Search</button>
-<button onclick="go('new-order.html')">New Order</button>
-<button onclick="go('sales-report.html')">Sales Report</button>
-<button onclick="go('margin-report.html')">Margin Report</button>
-<button onclick="go('commission-report.html')">Commission Report</button>
-
-<br><br>
-
-<h3>COMMERCIAL</h3>
-<button onclick="go('customers.html')">Customers</button>
-<button onclick="go('price-tables.html')">Price Tables</button>
-
-<br><br>
-
-<h3>SUPPLIERS</h3>
-<button onclick="go('suppliers.html')">Suppliers</button>
-
-<br><br>
-
-<h3>PURCHASE</h3>
-<button onclick="go('purchase-orders.html')">Purchase Orders</button>
-<button onclick="go('on-order.html')">On Order</button>
-
-<br><br>
+<div id="sales_menu">
+  <button onclick="go('seller.html')">Seller App</button>
+  <button onclick="go('product-search.html')">Product Search</button>
+  <button onclick="go('new-order.html')">New Order</button>
+</div>
 
 <h3>WAREHOUSE</h3>
-<button onclick="go('receiving.html')">Receiving</button>
-<button onclick="go('put-away.html')">Put Away</button>
-<button onclick="go('returns.html')">Returns</button>
-<button onclick="go('adjustments.html')">Adjustments</button>
-<button onclick="go('waiting-picking.html')">Waiting Picking</button>
-<button onclick="go('picking.html')">Picking</button>
-<button onclick="go('packing.html')">Packing</button>
-<button onclick="go('staging.html')">Staging</button>
-<button onclick="go('barcode-scan.html')">Barcode Scan</button>
-
-<br><br>
+<div id="warehouse_menu">
+  <button onclick="go('receiving.html')">Receiving</button>
+  <button onclick="go('put-away.html')">Put Away</button>
+  <button onclick="go('picking.html')">Picking</button>
+  <button onclick="go('packing.html')">Packing</button>
+  <button onclick="go('staging.html')">Staging</button>
+</div>
 
 <h3>LOGISTICS</h3>
-<button onclick="go('route-manager.html')">Route Manager</button>
-<button onclick="go('truck-loading.html')">Truck Loading</button>
-<button onclick="go('driver.html')">Driver App</button>
-<button onclick="go('delivery.html')">Delivery</button>
-
-<br><br>
-
-<h3>INVENTORY</h3>
-<button onclick="go('inventory.html')">Inventory</button>
-<button onclick="go('inventory-by-bin.html')">Inventory by Bin</button>
-<button onclick="go('inventory-count.html')">Inventory Count</button>
-<button onclick="go('expiration-report.html')">Expiration Report</button>
-<button onclick="go('low-stock.html')">Low Stock</button>
-
-<br><br>
+<div id="logistics_menu">
+  <button onclick="go('route-manager.html')">Routes</button>
+  <button onclick="go('truck-loading.html')">Load Truck</button>
+  <button onclick="go('driver.html')">Driver</button>
+</div>
 
 <h3>FINANCE</h3>
-<button onclick="go('invoices.html')">Invoices</button>
-<button onclick="go('payments.html')">Payments</button>
-<button onclick="go('aging.html')">Aging Report</button>
+<div id="finance_menu">
+  <button onclick="go('invoices.html')">Invoices</button>
+  <button onclick="go('payments.html')">Payments</button>
+  <button onclick="go('aging.html')">Aging</button>
+</div>
 
 <script>
 function go(page){
   window.location.href = page;
+}
+
+let role = localStorage.getItem("role");
+
+if(role !== 'admin' && role !== 'sales'){
+  document.getElementById('sales_menu').style.display = 'none';
+}
+
+if(role !== 'admin' && role !== 'warehouse'){
+  document.getElementById('warehouse_menu').style.display = 'none';
+}
+
+if(role !== 'admin' && role !== 'driver'){
+  document.getElementById('logistics_menu').style.display = 'none';
+}
+
+if(role !== 'admin' && role !== 'finance'){
+  document.getElementById('finance_menu').style.display = 'none';
 }
 </script>
 
