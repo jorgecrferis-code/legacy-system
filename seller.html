@@ -9,40 +9,68 @@
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
-<h2>NEW ORDER</h2>
+<h2>SELLER APP</h2>
 
-<input id="customer_id" placeholder="Customer ID"><br><br>
-<input id="salesperson" placeholder="Salesperson"><br><br>
+<label>Customer ID</label><br>
+<input id="customer_id" placeholder="Customer ID" style="width:100%; padding:10px;">
 
-<button onclick="createOrder()">Create Order</button>
+<br><br>
 
-<h2>ADD PRODUCT</h2>
+<label>Salesperson</label><br>
+<input id="salesperson" placeholder="Salesperson" style="width:100%; padding:10px;">
 
-<input id="order_id" placeholder="Order ID"><br><br>
-<input id="product_id" placeholder="Product ID"><br><br>
-<input id="price" placeholder="Price"><br><br>
-<input id="qty" placeholder="Qty"><br><br>
+<br><br>
 
-<button onclick="addItem()">Add Item</button>
+<button onclick="createOrder()" style="padding:12px 20px; font-size:16px;">CREATE ORDER</button>
+
+<h2>ADD ITEM TO ORDER</h2>
+
+<label>Order ID</label><br>
+<input id="order_id" placeholder="Order ID" style="width:100%; padding:10px;">
+
+<br><br>
+
+<label>Product ID</label><br>
+<input id="product_id" placeholder="Product ID" style="width:100%; padding:10px;">
+
+<br><br>
+
+<label>Price</label><br>
+<input id="price" placeholder="Price" style="width:100%; padding:10px;">
+
+<br><br>
+
+<label>Qty Boxes</label><br>
+<input id="qty_boxes" placeholder="Qty Boxes" style="width:100%; padding:10px;">
+
+<br><br>
+
+<button onclick="addItem()" style="padding:12px 20px; font-size:16px;">ADD ITEM</button>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
-const supabase = window.supabase.createClient(
-  "https://ougbokufspjduwepqepj.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ"
-);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function createOrder(){
   const customer_id = document.getElementById('customer_id').value;
   const salesperson = document.getElementById('salesperson').value;
 
-  let { data } = await supabase
+  let { data, error } = await supabase
     .from('orders')
-    .insert([{ customer_id, salesperson }])
+    .insert([{
+      customer_id,
+      salesperson,
+      status: 'new'
+    }])
     .select()
     .single();
+
+  if(error){
+    alert(error.message);
+    return;
+  }
 
   alert('Order Created ID: ' + data.id);
 }
@@ -50,17 +78,30 @@ async function createOrder(){
 async function addItem(){
   const order_id = document.getElementById('order_id').value;
   const product_id = document.getElementById('product_id').value;
-  const price = document.getElementById('price').value;
-  const qty = document.getElementById('qty').value;
-  const total = price * qty;
+  const price = Number(document.getElementById('price').value || 0);
+  const qty_boxes = Number(document.getElementById('qty_boxes').value || 0);
+  const total = price * qty_boxes;
 
-  await supabase.from('order_items').insert([{
-    order_id,
-    product_id,
-    price,
-    quantity: qty,
-    total
-  }]);
+  let { error } = await supabase
+    .from('order_items')
+    .insert([{
+      order_id,
+      product_id,
+      price,
+      qty_boxes,
+      total
+    }]);
+
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+  await supabase.rpc('allocate_inventory', {
+    p_product_id: Number(product_id),
+    p_qty: qty_boxes,
+    p_order_id: Number(order_id)
+  });
 
   alert('Item Added');
 }
