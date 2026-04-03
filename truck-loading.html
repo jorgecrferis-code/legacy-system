@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Truck Loading</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>TRUCK LOADING</h2>
+
+<label>Select Route:</label>
+<select id="route"></select>
+
+<br><br>
+
+<h3>Orders Ready to Load</h3>
+<div id="orders">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadRoutes() {
+  let { data } = await supabase.from('routes').select('*');
+
+  let select = document.getElementById('route');
+  select.innerHTML = "";
+
+  data.forEach(r => {
+    select.innerHTML += `<option value="${r.id}">${r.route_name}</option>`;
+  });
+}
+
+async function loadOrders() {
+  let { data } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('status', 'staging');
+
+  let html = "";
+
+  data.forEach(order => {
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
+        Order #${order.id}
+        <button onclick="loadOrder(${order.id})">LOAD</button>
+      </div>
+    `;
+  });
+
+  document.getElementById('orders').innerHTML = html;
+}
+
+async function loadOrder(orderId) {
+  let routeId = document.getElementById('route').value;
+
+  await supabase.from('truck_loading').insert([
+    {
+      route_id: routeId,
+      order_id: orderId
+    }
+  ]);
+
+  await supabase
+    .from('orders')
+    .update({ status: 'loaded' })
+    .eq('id', orderId);
+
+  alert("Order Loaded");
+  loadOrders();
+}
+
+loadRoutes();
+loadOrders();
+</script>
+
+</body>
+</html>
