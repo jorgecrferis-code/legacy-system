@@ -10,35 +10,25 @@
 
 <h1>LEGACY SYSTEM</h1>
 
-<br>
-
-<button onclick="location.href='waiting-picking.html'">
-Waiting Picking
-</button>
+<h3>SALES</h3>
+<button onclick="go('product-search.html')">Product Search</button>
+<button onclick="go('new-order.html')">New Order</button>
 
 <br><br>
 
-<button onclick="location.href='picking.html'">
-Picking
-</button>
+<h3>WAREHOUSE</h3>
+<button onclick="go('waiting-picking.html')">Waiting Picking</button>
+<button onclick="go('picking.html')">Picking</button>
+<button onclick="go('packing.html')">Packing</button>
+<button onclick="go('staging.html')">Staging</button>
+<button onclick="go('load-truck.html')">Load Truck</button>
+<button onclick="go('delivery.html')">Delivery</button>
 
-<br><br>
-
-<button onclick="location.href='packing.html'">
-Packing
-</button>
-
-<br><br>
-
-<button onclick="location.href='inventory.html'">
-Inventory
-</button>
-
-<br><br>
-
-<button onclick="location.href='delivery.html'">
-Delivery
-</button>
+<script>
+function go(page){
+  window.location.href = page;
+}
+</script>
 
 </body>
 </html>
