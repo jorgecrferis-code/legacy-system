@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Audit Log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>AUDIT LOG</h2>
+
+<div id="logs">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadLogs(){
+  let { data } = await supabase
+    .from('audit_log')
+    .select('*')
+    .order('created_at', { ascending:false })
+    .limit(100);
+
+  let html = '';
+
+  data.forEach(log => {
+    html += `
+      <div style="background:white; padding:15px; margin-bottom:10px; border:1px solid #ddd;">
+        <b>${log.created_at}</b><br>
+        User: ${log.user_name}<br>
+        Action: ${log.action}<br>
+        Table: ${log.table_name}<br>
+        Record: ${log.record_id}<br>
+        Description: ${log.description}
+      </div>
+    `;
+  });
+
+  document.getElementById('logs').innerHTML = html;
+}
+
+loadLogs();
+</script>
+
+</body>
+</html>
