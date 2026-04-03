@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Inventory Transactions</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>INVENTORY TRANSACTIONS</h2>
+
+<input
+  id="search"
+  placeholder="Search product..."
+  style="width:100%; padding:10px; margin-bottom:20px;"
+  onkeyup="loadTransactions()"
+>
+
+<div id="transactions">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadTransactions(){
+  let search = document.getElementById('search').value;
+
+  let query = supabase
+    .from('inventory_transaction_history')
+    .select('*')
+    .order('created_at', { ascending:false })
+    .limit(100);
+
+  if(search){
+    query = query.ilike('product_name', '%' + search + '%');
+  }
+
+  let { data, error } = await query;
+
+  if(error){
+    document.getElementById('transactions').innerHTML = error.message;
+    return;
+  }
+
+  let html = '';
+
+  (data || []).forEach(t => {
+    html += `
+      <div style="background:white; border:1px solid #ddd; padding:15px; margin-bottom:10px; border-radius:8px;">
+        <b>${t.product_name || 'Product #' + t.product_id}</b><br>
+        Qty: ${t.qty}<br>
+        Type: <b>${t.transaction_type || '-'}</b><br>
+        Ref: ${t.reference_table || '-'} / ${t.reference_id || '-'}<br>
+        Bin: ${t.bin_id || '-'}<br>
+        Lot: ${t.lot || '-'}<br>
+        Exp: ${t.expiration_date || '-'}<br>
+        Date: ${t.created_at || '-'}
+      </div>
+    `;
+  });
+
+  document.getElementById('transactions').innerHTML = html || 'No transactions found';
+}
+
+loadTransactions();
+</script>
+
+</body>
+</html>
