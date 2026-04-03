@@ -14,53 +14,60 @@
 <div id="items">Loading...</div>
 
 <br>
-<button onclick="finishPicking()">FINISH PICKING</button>
+<button onclick="finishPicking()" style="padding:12px 20px; font-size:16px;">FINISH PICKING</button>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
-
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const urlParams = new URLSearchParams(window.location.search);
 const orderId = urlParams.get('order_id');
 
 async function loadItems() {
-  let { data } = await supabase
+  let { data, error } = await supabase
     .from('order_items')
     .select('*, products(name)')
     .eq('order_id', orderId);
 
-  let html = "";
+  if (error) {
+    document.getElementById('items').innerHTML = error.message;
+    return;
+  }
 
-  data.forEach(item => {
+  let html = '';
+
+  (data || []).forEach(item => {
     html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
-        ${item.products.name}
-        <br>
-        Qty Boxes: ${item.qty_boxes}
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
+        <b>${item.products ? item.products.name : ''}</b><br>
+        Qty Boxes: ${item.qty_boxes}<br>
+        Price: $${Number(item.price || 0).toFixed(2)}<br>
+        Total: $${Number(item.total || 0).toFixed(2)}
       </div>
     `;
   });
 
-  document.getElementById('items').innerHTML = html;
+  document.getElementById('items').innerHTML = html || 'No items found';
 }
 
 async function finishPicking() {
-
-  let { data: items } = await supabase
+  let { data: items, error } = await supabase
     .from('order_items')
     .select('*')
     .eq('order_id', orderId);
 
-  for (let item of items) {
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
+  for (let item of (items || [])) {
     await supabase.rpc('pick_inventory', {
       p_product_id: item.product_id,
       p_qty: item.qty_boxes,
-      p_order_id: orderId
+      p_order_id: Number(orderId)
     });
-
   }
 
   await supabase
@@ -68,8 +75,8 @@ async function finishPicking() {
     .update({ status: 'packing' })
     .eq('id', orderId);
 
-  alert("Picking Finished");
-  window.location.href = "waiting-picking.html";
+  alert('Picking Finished');
+  window.location.href = 'packing.html';
 }
 
 loadItems();
