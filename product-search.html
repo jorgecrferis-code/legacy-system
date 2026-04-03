@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Legacy - Product Search</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>PRODUCT SEARCH</h2>
+
+<input
+  type="text"
+  id="search"
+  placeholder="Search product..."
+  style="width:100%; padding:10px; font-size:16px;"
+  onkeyup="loadProducts()"
+/>
+
+<br><br>
+
+<div id="products">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadProducts() {
+  let search = document.getElementById('search').value;
+
+  let query = supabase
+    .from('product_search')
+    .select('*')
+    .order('name');
+
+  if (search) {
+    query = query.ilike('name', '%' + search + '%');
+  }
+
+  let { data, error } = await query;
+
+  if (error) {
+    document.getElementById('products').innerHTML = error.message;
+    return;
+  }
+
+  let html = "";
+
+  data.forEach(p => {
+    html += `
+      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
+        <b>${p.name}</b> (${p.packer || ''})<br>
+        Type: ${p.frozen_fresh || ''}<br>
+        Box Weight: ${p.box_weight || ''}<br>
+        Available: <b>${p.available}</b><br>
+        Next Exp: ${p.next_exp || '-'}
+      </div>
+    `;
+  });
+
+  document.getElementById('products').innerHTML = html;
+}
+
+loadProducts();
+</script>
+
+</body>
+</html>
