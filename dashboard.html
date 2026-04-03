@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h1>DASHBOARD</h1>
+
+<div id="kpis">Loading...</div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadKPIs(){
+
+  let { data: orders } = await supabase.from('orders').select('*');
+  let { data: orderItems } = await supabase.from('order_items').select('qty_boxes, price, products(cost)');
+  let { data: inventory } = await supabase.from('inventory').select('*');
+  let { data: exp } = await supabase.from('inventory_by_bin').select('*');
+  let { data: po } = await supabase.from('purchase_orders').select('*');
+
+  let totalSales = 0;
+  let totalCost = 0;
+
+  orderItems.forEach(i => {
+    totalSales += i.price * i.qty_boxes;
+    totalCost += i.products.cost * i.qty_boxes;
+  });
+
+  let totalMargin = totalSales - totalCost;
+
+  let today = new Date().toISOString().split('T')[0];
+  let ordersToday = orders.filter(o => o.created_at && o.created_at.startsWith(today)).length;
+
+  let lowStock = inventory.filter(i => i.qty_on_hand < 10).length;
+
+  let expiring = exp.filter(e => {
+    if(!e.expiration_date) return false;
+    let d = new Date(e.expiration_date);
+    let now = new Date();
+    let diff = (d-now)/(1000*60*60*24);
+    return diff < 30;
+  }).length;
+
+  let openPO = po.filter(p => p.status == 'open').length;
+
+  let waitingPicking = orders.filter(o => o.status == 'waiting').length;
+
+  let html = `
+    <div style="background:white; padding:20px; margin:10px; border:1px solid #ddd;">
+      <h3>Total Sales: $${totalSales.toFixed(2)}</h3>
+      <h3>Total Margin: $${totalMargin.toFixed(2)}</h3>
+      <h3>Orders Today: ${ordersToday}</h3>
+      <h3>Low Stock Items: ${lowStock}</h3>
+      <h3>Expiring Products (<30 days): ${expiring}</h3>
+      <h3>Open Purchase Orders: ${openPO}</h3>
+      <h3>Orders Waiting Picking: ${waitingPicking}</h3>
+    </div>
+  `;
+
+  document.getElementById('kpis').innerHTML = html;
+}
+
+loadKPIs();
+</script>
+
+</body>
+</html>
