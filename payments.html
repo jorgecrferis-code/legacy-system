@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Payments</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>RECEIVE PAYMENT</h2>
+
+Invoice ID:<br>
+<input type="number" id="invoice_id"><br><br>
+
+Amount:<br>
+<input type="number" id="amount"><br><br>
+
+Method:<br>
+<input type="text" id="method"><br><br>
+
+<button onclick="savePayment()">SAVE PAYMENT</button>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function savePayment() {
+  let invoice = document.getElementById('invoice_id').value;
+  let amount = document.getElementById('amount').value;
+  let method = document.getElementById('method').value;
+
+  await supabase.from('payments').insert([{
+    invoice_id: invoice,
+    amount: amount,
+    payment_method: method
+  }]);
+
+  alert("Payment saved");
+}
+</script>
+
+</body>
+</html>
