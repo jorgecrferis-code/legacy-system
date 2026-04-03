@@ -20,10 +20,15 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function loadDashboard(){
-  let { data } = await supabase
+  let { data, error } = await supabase
     .from('dashboard_summary')
     .select('*')
     .single();
+
+  if(error){
+    document.getElementById('dashboard').innerHTML = error.message;
+    return;
+  }
 
   let html = `
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
