@@ -11,8 +11,8 @@
 
 <h2>PRODUCT SEARCH</h2>
 
-<label>Customer:</label>
-<select id="customer" onchange="loadPriceTable()" style="width:100%; padding:10px;"></select>
+<label><b>Customer:</b></label><br>
+<select id="customer" onchange="loadCustomer()" style="width:100%; padding:10px;"></select>
 
 <br><br>
 
@@ -24,16 +24,17 @@
   onkeyup="searchProducts()"
 />
 
-<div id="results" style="margin-top:20px;"></div>
+<br><br>
+
+<div id="results">Loading...</div>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
-
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let customers = [];
-let selectedPriceTable = null;
+let selectedCustomer = null;
 
 async function loadCustomers() {
   let { data } = await supabase
@@ -41,7 +42,7 @@ async function loadCustomers() {
     .select('*')
     .order('customer_name');
 
-  customers = data;
+  customers = data || [];
 
   let select = document.getElementById('customer');
   select.innerHTML = '<option value="">Select customer</option>';
@@ -51,28 +52,23 @@ async function loadCustomers() {
   });
 }
 
-function loadPriceTable() {
-  let customerId = document.getElementById('customer').value;
-  let customer = customers.find(c => c.id == customerId);
-
-  if (customer) {
-    selectedPriceTable = customer.price_table;
-  }
-
+function loadCustomer() {
+  let id = document.getElementById('customer').value;
+  selectedCustomer = customers.find(c => String(c.id) === String(id)) || null;
   searchProducts();
 }
 
 async function getPrice(productId) {
-  if (!selectedPriceTable) return 0;
+  if (!selectedCustomer || !selectedCustomer.price_table) return 0;
 
   let { data } = await supabase
     .from('product_prices')
     .select('*')
     .eq('product_id', productId)
-    .eq('price_table', selectedPriceTable)
+    .eq('price_table', selectedCustomer.price_table)
     .limit(1);
 
-  if (!data || data.length == 0) return 0;
+  if (!data || data.length === 0) return 0;
 
   return Number(data[0].price_box || 0);
 }
@@ -81,47 +77,45 @@ async function searchProducts() {
   let search = document.getElementById('search').value;
 
   let query = supabase
-    .from('products')
+    .from('inventory_summary')
     .select('*')
-    .limit(20);
+    .order('name')
+    .limit(30);
 
   if (search) {
     query = query.ilike('name', '%' + search + '%');
   }
 
-  let { data } = await query;
+  let { data, error } = await query;
+
+  if (error) {
+    document.getElementById('results').innerHTML = error.message;
+    return;
+  }
 
   let html = '';
 
-  for (let p of data) {
-
-    let price = await getPrice(p.id);
-
-    let { data: inv } = await supabase
-      .from('inventory')
-      .select('*')
-      .eq('product_id', p.id)
-      .limit(1);
-
-    let available = inv && inv.length ? inv[0].available : 0;
-    let on_order = inv && inv.length ? inv[0].on_order : 0;
+  for (let p of (data || [])) {
+    let price = await getPrice(p.product_id);
 
     html += `
       <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
         <b>${p.name}</b><br>
-        Price: $${price.toFixed(2)}<br>
-        Available: ${available}<br>
-        On Order: ${on_order}<br>
+        Price: <b>$${price.toFixed(2)}</b><br>
+        Available: <b>${Number(p.available || 0)}</b><br>
+        On Order: ${Number(p.on_order || 0)}<br>
         Box Weight: ${p.box_weight || '-'}<br>
-        Type: ${p.product_type || '-'}<br>
+        Type: ${p.frozen_fresh || '-'}<br>
+        Next Expiration: ${p.next_expiration || '-'}
       </div>
     `;
   }
 
-  document.getElementById('results').innerHTML = html;
+  document.getElementById('results').innerHTML = html || 'No products found';
 }
 
 loadCustomers();
+searchProducts();
 </script>
 
 </body>
