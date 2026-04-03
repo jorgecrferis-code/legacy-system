@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Inventory Adjustments</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>INVENTORY ADJUSTMENT</h2>
+
+<select id="product"></select>
+<select id="bin"></select>
+
+<input id="qty" type="number" placeholder="Qty Change">
+<input id="reason" placeholder="Reason">
+
+<button onclick="adjust()">ADJUST</button>
+
+<h3>History</h3>
+<div id="history"></div>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function load(){
+  let { data: products } = await supabase.from('products').select('id,name');
+  let { data: bins } = await supabase.from('bins').select('id,name');
+
+  let p = document.getElementById('product');
+  let b = document.getElementById('bin');
+
+  (products||[]).forEach(x=>{
+    p.innerHTML += `<option value="${x.id}">${x.name}</option>`;
+  });
+
+  (bins||[]).forEach(x=>{
+    b.innerHTML += `<option value="${x.id}">${x.name}</option>`;
+  });
+
+  loadHistory();
+}
+
+async function adjust(){
+  let product_id = document.getElementById('product').value;
+  let bin_id = document.getElementById('bin').value;
+  let qty_change = document.getElementById('qty').value;
+  let reason = document.getElementById('reason').value;
+
+  await supabase.from('inventory_adjustments').insert([{
+    product_id,
+    bin_id,
+    qty_change,
+    reason,
+    created_by: 'admin'
+  }]);
+
+  loadHistory();
+}
+
+async function loadHistory(){
+  let { data } = await supabase
+    .from('inventory_adjustments')
+    .select('*')
+    .order('created_at', { ascending:false })
+    .limit(20);
+
+  let html='';
+  (data||[]).forEach(x=>{
+    html += `
+      <div style="background:white; padding:10px; margin-bottom:5px;">
+        Product ${x.product_id} |
+        Bin ${x.bin_id} |
+        Qty ${x.qty_change} |
+        ${x.reason}
+      </div>
+    `;
+  });
+
+  document.getElementById('history').innerHTML = html;
+}
+
+load();
+</script>
+
+</body>
+</html>
