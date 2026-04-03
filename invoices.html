@@ -23,30 +23,31 @@ async function loadInvoices() {
   let { data, error } = await supabase
     .from('accounts_receivable')
     .select('*')
-    .order('invoice_date', { ascending: false });
+    .order('invoice_id', { ascending: false });
 
-  if(error){
+  if (error) {
     document.getElementById('invoices').innerHTML = error.message;
     return;
   }
 
   let html = '';
 
-  data.forEach(inv => {
+  (data || []).forEach(inv => {
     html += `
       <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
         <b>Invoice #${inv.invoice_id}</b><br>
-        Customer: ${inv.customer_name}<br>
-        Invoice Date: ${inv.invoice_date}<br>
-        Due Date: ${inv.due_date}<br>
-        Total: $${Number(inv.total).toFixed(2)}<br>
-        Paid: $${Number(inv.paid).toFixed(2)}<br>
-        Balance: <b>$${Number(inv.balance).toFixed(2)}</b>
+        Customer: ${inv.customer_name || '-'}<br>
+        Invoice Date: ${inv.invoice_date || '-'}<br>
+        Due Date: ${inv.due_date || '-'}<br>
+        Total: $${Number(inv.total || 0).toFixed(2)}<br>
+        Paid: $${Number(inv.paid || 0).toFixed(2)}<br>
+        Balance: <b>$${Number(inv.balance || 0).toFixed(2)}</b><br>
+        Status: ${inv.status || '-'}
       </div>
     `;
   });
 
-  document.getElementById('invoices').innerHTML = html;
+  document.getElementById('invoices').innerHTML = html || 'No invoices found';
 }
 
 loadInvoices();
