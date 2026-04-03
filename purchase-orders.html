@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Purchase Orders</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>PURCHASE ORDER</h2>
+
+<label>Supplier:</label>
+<input type="text" id="supplier">
+
+<br><br>
+
+<input type="text" id="productSearch" placeholder="Search product..." 
+style="width:100%; padding:10px;" onkeyup="searchProducts()">
+
+<div id="productList"></div>
+
+<h3>PO Items</h3>
+<div id="poItems"></div>
+
+<br>
+<button onclick="createPO()">CREATE PURCHASE ORDER</button>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let poItems = [];
+
+async function searchProducts() {
+  let search = document.getElementById('productSearch').value;
+
+  let { data } = await supabase
+    .from('products')
+    .select('*')
+    .ilike('name', '%' + search + '%')
+    .limit(10);
+
+  let html = "";
+
+  data.forEach(p => {
+    html += `
+      <div style="border:1px solid #ccc; padding:10px; margin:5px;">
+        ${p.name}
+        <button onclick="addItem(${p.id}, '${p.name}')">Add</button>
+      </div>
+    `;
+  });
+
+  document.getElementById('productList').innerHTML = html;
+}
+
+function addItem(id, name) {
+  poItems.push({ product_id: id, name: name, qty: 1 });
+  renderItems();
+}
+
+function renderItems() {
+  let html = "";
+  poItems.forEach((item, index) => {
+    html += `
+      <div>
+        ${item.name}
+        Qty:
+        <input type="number" value="${item.qty}" onchange="updateQty(${index}, this.value)">
+      </div>
+    `;
+  });
+  document.getElementById('poItems').innerHTML = html;
+}
+
+function updateQty(index, qty) {
+  poItems[index].qty = qty;
+}
+
+async function createPO() {
+  let supplier = document.getElementById('supplier').value;
+
+  let { data: po } = await supabase
+    .from('purchase_orders')
+    .insert([{ supplier: supplier, status: 'open' }])
+    .select()
+    .single();
+
+  for (let item of poItems) {
+    await supabase.from('purchase_order_items').insert([
+      {
+        po_id: po.id,
+        product_id: item.product_id,
+        qty: item.qty
+      }
+    ]);
+  }
+
+  alert("Purchase Order Created!");
+}
+</script>
+
+</body>
+</html>
