@@ -16,7 +16,8 @@
 
 <br><br>
 
-<input type="text" id="productSearch" placeholder="Search product..." onkeyup="searchProducts()">
+<input type="text" id="productSearch" placeholder="Search product..." 
+style="width:100%; padding:10px;" onkeyup="searchProducts()">
 
 <div id="productList"></div>
 
@@ -28,16 +29,21 @@
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "SUA_ANON_AQUI";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let orderItems = [];
 
 async function loadCustomers() {
-  let { data } = await supabase.from('customers').select('*').order('customer_name');
+  let { data } = await supabase
+    .from('customers')
+    .select('*')
+    .order('customer_name');
 
   let select = document.getElementById('customer');
+  select.innerHTML = "";
+
   data.forEach(c => {
     select.innerHTML += `<option value="${c.id}">${c.customer_name}</option>`;
   });
@@ -106,6 +112,13 @@ async function submitOrder() {
         qty_boxes: item.qty
       }
     ]);
+
+    // allocate inventory
+    await supabase.rpc('allocate_inventory', {
+      p_product_id: item.product_id,
+      p_qty: item.qty,
+      p_order_id: order.id
+    });
   }
 
   alert("Order Created!");
