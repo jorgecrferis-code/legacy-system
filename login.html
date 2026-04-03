@@ -7,14 +7,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
-<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+<body style="font-family: Arial; background:#f4f6f8; padding:40px;">
 
-<h2>LOGIN</h2>
+<h2>LEGACY LOGIN</h2>
 
-<input type="text" id="email" placeholder="Email"><br><br>
-<input type="password" id="password" placeholder="Password"><br><br>
+<input id="user" placeholder="User" style="width:100%; padding:10px;"><br><br>
+<input id="pass" placeholder="Password" type="password" style="width:100%; padding:10px;"><br><br>
 
-<button onclick="login()">LOGIN</button>
+<button onclick="login()" style="padding:12px 20px;">LOGIN</button>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -23,23 +23,25 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function login(){
-
-  let email = document.getElementById('email').value;
-  let password = document.getElementById('password').value;
+  const user = document.getElementById('user').value;
+  const pass = document.getElementById('pass').value;
 
   let { data } = await supabase
     .from('users')
     .select('*')
-    .eq('email', email)
-    .eq('password', password)
+    .eq('name', user)
+    .eq('password', pass)
     .single();
 
-  if(data){
-    localStorage.setItem("user", JSON.stringify(data));
-    window.location.href = "index.html";
-  } else {
-    alert("Login Failed");
+  if(!data){
+    alert('Login failed');
+    return;
   }
+
+  localStorage.setItem("user", data.name);
+  localStorage.setItem("role", data.role);
+
+  window.location.href = "index.html";
 }
 </script>
 
