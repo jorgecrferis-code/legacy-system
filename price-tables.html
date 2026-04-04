@@ -1,36 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Price Tables</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Product Prices</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
-<h2>PRICE TABLES</h2>
-
-<h3>Create Price Table</h3>
-<input type="text" id="tableName" placeholder="Table Name">
-<button onclick="createTable()">Create</button>
-
-<hr>
-
-<h3>Add Product Price</h3>
+<h2>PRODUCT PRICE TABLE</h2>
 
 <select id="priceTable"></select>
-<br><br>
 
-<input type="text" id="productSearch" placeholder="Search product..." onkeyup="searchProducts()" style="width:100%; padding:10px;">
-<div id="productList"></div>
-
-<br>
-<label>Price:</label>
-<input type="number" id="price">
-
-<br><br>
-<button onclick="savePrice()">Save Price</button>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Product</th>
+<th>Price</th>
+<th>Save</th>
+</tr>
+</thead>
+<tbody id="prices"></tbody>
+</table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -38,69 +30,66 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let selectedProduct = null;
+loadTables();
 
-async function loadTables(){
-  let { data } = await supabase.from('price_tables').select('*');
-  let select = document.getElementById('priceTable');
+async function loadTables() {
+  let { data } = await supabase.from("price_tables").select("*");
+
+  let select = document.getElementById("priceTable");
   select.innerHTML = "";
 
   data.forEach(t => {
-    select.innerHTML += `<option value="${t.id}">${t.table_name}</option>`;
+    select.innerHTML += `<option value="${t.id}">${t.name}</option>`;
   });
+
+  loadPrices();
 }
 
-async function createTable(){
-  let name = document.getElementById('tableName').value;
-  await supabase.from('price_tables').insert([{ table_name: name }]);
-  alert("Price Table Created");
-  loadTables();
-}
+document.getElementById("priceTable").onchange = loadPrices;
 
-async function searchProducts(){
-  let search = document.getElementById('productSearch').value;
+async function loadPrices() {
 
-  let { data } = await supabase
-    .from('products')
-    .select('*')
-    .ilike('name', '%' + search + '%')
-    .limit(10);
+  let tableId = document.getElementById("priceTable").value;
+
+  let { data: products } = await supabase.from("products").select("*");
 
   let html = "";
 
-  data.forEach(p => {
+  for (const p of products) {
+
+    let { data: price } = await supabase
+      .from("product_prices")
+      .select("*")
+      .eq("product_id", p.id)
+      .eq("price_table_id", tableId)
+      .single();
+
+    let value = price ? price.price : "";
+
     html += `
-      <div style="border:1px solid #ccc; padding:10px; margin:5px;">
-        ${p.name}
-        <button onclick="selectProduct(${p.id})">Select</button>
-      </div>
+      <tr>
+        <td>${p.name}</td>
+        <td><input id="price_${p.id}" value="${value}"></td>
+        <td><button onclick="savePrice(${p.id})">Save</button></td>
+      </tr>
     `;
+  }
+
+  document.getElementById("prices").innerHTML = html;
+}
+
+async function savePrice(productId) {
+  let tableId = document.getElementById("priceTable").value;
+  let price = document.getElementById("price_" + productId).value;
+
+  await supabase.from("product_prices").upsert({
+    product_id: productId,
+    price_table_id: tableId,
+    price: price
   });
 
-  document.getElementById('productList').innerHTML = html;
+  alert("Saved");
 }
-
-function selectProduct(id){
-  selectedProduct = id;
-  alert("Product Selected");
-}
-
-async function savePrice(){
-  let tableId = document.getElementById('priceTable').value;
-  let price = document.getElementById('price').value;
-
-  await supabase.from('product_prices').insert([
-    {
-      product_id: selectedProduct,
-      price_table_id: tableId,
-      price: price
-    }
-  ]);
-
-  alert("Price Saved");
-}
-
-loadTables();
 </script>
 
 </body>
