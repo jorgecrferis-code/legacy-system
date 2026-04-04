@@ -14,7 +14,7 @@
 <div id="orderInfo">Loading...</div>
 
 <h3>Items</h3>
-<div id="items"></div>
+<div id="items">Loading...</div>
 
 <br>
 <button onclick="finishPicking()">FINISH PICKING</button>
@@ -50,13 +50,14 @@ async function loadOrder() {
   let html = "";
 
   for (const item of items) {
+
     const { data: product } = await supabaseClient
       .from("products")
-      .select("name_en")
+      .select("*")
       .eq("id", item.product_id)
       .single();
 
-    html += item.qty + " - " + product.name_en + "<br>";
+    html += item.qty_boxes + " - " + product.name_en + "<br>";
   }
 
   document.getElementById("items").innerHTML = html;
