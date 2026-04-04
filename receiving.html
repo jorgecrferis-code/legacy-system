@@ -1,26 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Receiving</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Receiving</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
 <h2>RECEIVING</h2>
 
-<input id="po_id" placeholder="PO ID"><br><br>
-<input id="product_id" placeholder="Product ID"><br><br>
-<input id="qty" placeholder="Qty Received"><br><br>
-<input id="lot" placeholder="Lot"><br><br>
-<input id="exp" placeholder="Expiration Date"><br><br>
-
-<button onclick="receive()">Receive</button>
-
-<h2>RECEIVED ITEMS</h2>
-<div id="receiving_list">Loading...</div>
+<h3>Open Purchase Orders</h3>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>PO</th>
+<th>Vendor</th>
+<th>Status</th>
+<th>Receive</th>
+</tr>
+</thead>
+<tbody id="poList"></tbody>
+</table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -28,49 +30,43 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function receive(){
-  const po_id = document.getElementById('po_id').value;
-  const product_id = document.getElementById('product_id').value;
-  const qty = document.getElementById('qty').value;
-  const lot = document.getElementById('lot').value;
-  const exp = document.getElementById('exp').value;
+loadPO();
 
-  await supabase.from('receiving').insert([{
-    po_id,
-    product_id,
-    qty_received: qty,
-    lot,
-    expiration_date: exp
-  }]);
-
-  alert('Received');
-  loadReceiving();
-}
-
-async function loadReceiving(){
+async function loadPO() {
   let { data } = await supabase
-    .from('receiving')
-    .select('*')
-    .order('received_at', { ascending:false });
+    .from("purchase_orders")
+    .select("*")
+    .eq("status", "open");
 
-  let html = '';
+  let html = "";
 
-  data.forEach(r => {
+  for (const po of data) {
     html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
-        PO: ${r.po_id}<br>
-        Product: ${r.product_id}<br>
-        Qty: ${r.qty_received}<br>
-        Lot: ${r.lot}<br>
-        Exp: ${r.expiration_date}
-      </div>
+      <tr>
+        <td>${po.id}</td>
+        <td>${po.vendor}</td>
+        <td>${po.status}</td>
+        <td>
+          <button onclick="receivePO(${po.id})">RECEIVE</button>
+        </td>
+      </tr>
     `;
-  });
+  }
 
-  document.getElementById('receiving_list').innerHTML = html;
+  document.getElementById("poList").innerHTML = html;
 }
 
-loadReceiving();
+async function receivePO(poId) {
+
+  // marcar PO como recebido
+  await supabase
+    .from("purchase_orders")
+    .update({ status: "received" })
+    .eq("id", poId);
+
+  alert("PO Received and Inventory Updated");
+  location.reload();
+}
 </script>
 
 </body>
