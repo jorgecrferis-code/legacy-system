@@ -1,26 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Payments</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Payments</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
-<h2>RECEIVE PAYMENT</h2>
+<h2>PAYMENTS</h2>
 
-<input id="invoice_id" placeholder="Invoice ID"><br><br>
-<input id="customer_name" placeholder="Customer"><br><br>
-<input id="amount" placeholder="Amount"><br><br>
-<input id="method" placeholder="Method (Cash, Check, ACH)"><br><br>
-<input id="reference" placeholder="Reference"><br><br>
-
-<button onclick="savePayment()">Save Payment</button>
-
-<h2>PAYMENT HISTORY</h2>
-<div id="payments">Loading...</div>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Invoice</th>
+<th>Amount</th>
+<th>Method</th>
+<th>Status</th>
+<th>Pay</th>
+</tr>
+</thead>
+<tbody id="payments"></tbody>
+</table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -28,49 +30,54 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function savePayment(){
-  const invoice_id = document.getElementById('invoice_id').value;
-  const customer_name = document.getElementById('customer_name').value;
-  const amount = document.getElementById('amount').value;
-  const method = document.getElementById('method').value;
-  const reference = document.getElementById('reference').value;
+loadInvoices();
 
-  await supabase.from('payments').insert([{
-    invoice_id,
-    customer_name,
-    amount,
-    method,
-    reference
-  }]);
-
-  alert('Payment saved');
-  loadPayments();
-}
-
-async function loadPayments(){
+async function loadInvoices() {
   let { data } = await supabase
-    .from('payments')
-    .select('*')
-    .order('payment_date', { ascending:false });
+    .from("invoices")
+    .select("*")
+    .eq("status", "open");
 
-  let html = '';
+  let html = "";
 
-  data.forEach(p => {
+  for (const inv of data) {
     html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
-        Invoice: ${p.invoice_id}<br>
-        Customer: ${p.customer_name}<br>
-        Amount: <b>$${Number(p.amount).toFixed(2)}</b><br>
-        Date: ${p.payment_date}<br>
-        Method: ${p.method}
-      </div>
+      <tr>
+        <td>${inv.id}</td>
+        <td>0</td>
+        <td>Cash</td>
+        <td>${inv.status}</td>
+        <td>
+          <button onclick="pay(${inv.id})">PAY</button>
+        </td>
+      </tr>
     `;
-  });
+  }
 
-  document.getElementById('payments').innerHTML = html;
+  document.getElementById("payments").innerHTML = html;
 }
 
-loadPayments();
+async function pay(invoiceId) {
+
+  await supabase
+    .from("payments")
+    .insert([
+      {
+        invoice_id: invoiceId,
+        amount: 0,
+        method: "cash",
+        status: "paid"
+      }
+    ]);
+
+  await supabase
+    .from("invoices")
+    .update({ status: "paid" })
+    .eq("id", invoiceId);
+
+  alert("Payment Registered!");
+  location.reload();
+}
 </script>
 
 </body>
