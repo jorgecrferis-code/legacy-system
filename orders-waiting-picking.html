@@ -1,44 +1,66 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Orders Waiting Picking</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Orders Waiting Picking</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
 <h2>ORDERS WAITING PICKING</h2>
 
-<div id="orders">Loading...</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/script.js"></script>
+<table border="1" cellpadding="10" cellspacing="0">
+<thead>
+<tr>
+<th>Order</th>
+<th>Customer</th>
+<th>Date</th>
+<th>Status</th>
+<th>Open</th>
+</tr>
+</thead>
+<tbody id="ordersTable"></tbody>
+</table>
 
 <script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+loadOrders();
+
 async function loadOrders() {
-  const orders = await getOrdersByStatus('waiting_picking');
+  const { data, error } = await supabaseClient
+    .from("orders")
+    .select("*")
+    .eq("status", "waiting")
+    .order("id", { ascending: true });
 
   let html = "";
 
-  orders.forEach(o => {
+  data.forEach(o => {
     html += `
-      <div style="background:white;padding:15px;margin:10px;border-radius:8px;">
-        Order #${o.id} - ${o.customer_name}
-        <br><br>
-        <button onclick="openPicking(${o.id})">OPEN PICKING</button>
-      </div>
+      <tr>
+        <td>${o.id}</td>
+        <td>${o.customer_name}</td>
+        <td>${new Date(o.created_at).toLocaleDateString()}</td>
+        <td>${o.status}</td>
+        <td>
+          <button onclick="openOrder(${o.id})">OPEN</button>
+        </td>
+      </tr>
     `;
   });
 
-  document.getElementById("orders").innerHTML = html;
+  document.getElementById("ordersTable").innerHTML = html;
 }
 
-function openPicking(id) {
-  window.location.href = "/picking.html?order_id=" + id;
+function openOrder(id) {
+  window.location.href = "picking.html?order_id=" + id;
 }
-
-loadOrders();
 </script>
 
 </body>
