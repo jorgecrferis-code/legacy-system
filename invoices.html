@@ -1,56 +1,82 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Invoices</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Invoices</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
 <h2>INVOICES</h2>
 
-<div id="invoices">Loading...</div>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Order</th>
+<th>Customer</th>
+<th>Date</th>
+<th>Status</th>
+<th>Create Invoice</th>
+</tr>
+</thead>
+<tbody id="orders"></tbody>
+</table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function loadInvoices() {
-  let { data, error } = await supabase
-    .from('accounts_receivable')
-    .select('*')
-    .order('invoice_id', { ascending: false });
+loadOrders();
 
-  if (error) {
-    document.getElementById('invoices').innerHTML = error.message;
-    return;
+async function loadOrders() {
+  const { data: orders } = await supabaseClient
+    .from("orders")
+    .select("*")
+    .eq("status", "delivered")
+    .order("id", { ascending: true });
+
+  let html = "";
+
+  for (const order of orders) {
+    html += `
+      <tr>
+        <td>${order.id}</td>
+        <td>${order.customer_name}</td>
+        <td>${order.created_at.substring(0,10)}</td>
+        <td>${order.status}</td>
+        <td>
+          <button onclick="createInvoice(${order.id})">CREATE</button>
+        </td>
+      </tr>
+    `;
   }
 
-  let html = '';
-
-  (data || []).forEach(inv => {
-    html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
-        <b>Invoice #${inv.invoice_id}</b><br>
-        Customer: ${inv.customer_name || '-'}<br>
-        Invoice Date: ${inv.invoice_date || '-'}<br>
-        Due Date: ${inv.due_date || '-'}<br>
-        Total: $${Number(inv.total || 0).toFixed(2)}<br>
-        Paid: $${Number(inv.paid || 0).toFixed(2)}<br>
-        Balance: <b>$${Number(inv.balance || 0).toFixed(2)}</b><br>
-        Status: ${inv.status || '-'}
-      </div>
-    `;
-  });
-
-  document.getElementById('invoices').innerHTML = html || 'No invoices found';
+  document.getElementById("orders").innerHTML = html;
 }
 
-loadInvoices();
+async function createInvoice(orderId) {
+
+  await supabaseClient
+    .from("invoices")
+    .insert([
+      {
+        order_id: orderId,
+        status: "open"
+      }
+    ]);
+
+  await supabaseClient
+    .from("orders")
+    .update({ status: "invoiced" })
+    .eq("id", orderId);
+
+  alert("Invoice Created!");
+  location.reload();
+}
 </script>
 
 </body>
