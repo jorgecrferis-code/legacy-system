@@ -14,7 +14,7 @@ async function loadCustomers() {
   let select = document.getElementById("customer");
   select.innerHTML = "";
   data.forEach(c => {
-    select.innerHTML += `<option value="${c.id}" data-price="${c.price_table_id}">${c.name}</option>`;
+    select.innerHTML += `<option value="${c.id}" data-price="${c.price_table_id || ""}">${c.name}</option>`;
   });
 }
 
@@ -31,12 +31,17 @@ document.getElementById("product").onchange = loadPrice;
 document.getElementById("customer").onchange = loadPrice;
 
 async function loadPrice() {
-
   let productId = document.getElementById("product").value;
   let customerSelect = document.getElementById("customer");
+
+  if (!customerSelect || customerSelect.selectedIndex < 0) return;
+
   let priceTableId = customerSelect.options[customerSelect.selectedIndex].dataset.price;
 
-  if (!productId || !priceTableId) return;
+  if (!productId || !priceTableId) {
+    document.getElementById("price").value = "";
+    return;
+  }
 
   let { data } = await supabase
     .from("product_prices")
@@ -47,33 +52,45 @@ async function loadPrice() {
 
   if (data) {
     document.getElementById("price").value = data.price;
+  } else {
+    document.getElementById("price").value = "";
   }
 }
 
 function addItem() {
-  let productId = document.getElementById("product").value;
-  let productName = document.getElementById("product").selectedOptions[0].text;
+  let productSelect = document.getElementById("product");
+  let productId = productSelect.value;
+  let productName = productSelect.selectedOptions[0].text;
   let qty = document.getElementById("qty").value;
   let price = document.getElementById("price").value;
+
+  if (!productId || !qty || !price) {
+    alert("Select product, qty and price");
+    return;
+  }
 
   orderItems.push({
     product_id: productId,
     name: productName,
-    qty: qty,
-    price: price
+    qty: Number(qty),
+    price: Number(price)
   });
 
   renderItems();
+
+  document.getElementById("qty").value = "";
 }
 
 function renderItems() {
   let html = "";
   orderItems.forEach(i => {
-    html += `<tr>
-      <td>${i.name}</td>
-      <td>${i.qty}</td>
-      <td>${i.price}</td>
-    </tr>`;
+    html += `
+      <tr>
+        <td>${i.name}</td>
+        <td>${i.qty}</td>
+        <td>${i.price}</td>
+      </tr>
+    `;
   });
   document.getElementById("items").innerHTML = html;
 }
@@ -81,11 +98,26 @@ function renderItems() {
 async function createOrder() {
   let customerId = document.getElementById("customer").value;
 
-  let { data: order } = await supabase
+  if (!customerId) {
+    alert("Select customer");
+    return;
+  }
+
+  if (orderItems.length === 0) {
+    alert("Add at least one item");
+    return;
+  }
+
+  let { data: order, error: orderError } = await supabase
     .from("orders")
     .insert([{ customer_id: customerId, status: "OPEN" }])
     .select()
     .single();
+
+  if (orderError) {
+    alert("Error creating order");
+    return;
+  }
 
   for (const item of orderItems) {
     await supabase.from("order_items").insert({
