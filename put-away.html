@@ -1,75 +1,104 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Put Away</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Put Away</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
 <h2>PUT AWAY</h2>
 
-<input id="product_id" placeholder="Product ID"><br><br>
-<input id="lot" placeholder="Lot"><br><br>
-<input id="exp" placeholder="Expiration"><br><br>
-<input id="qty" placeholder="Qty"><br><br>
-<input id="bin_id" placeholder="Bin ID"><br><br>
-
+<select id="product"></select>
+<select id="bin"></select>
+<input id="qty" type="number" placeholder="Qty">
 <button onclick="putAway()">Put Away</button>
 
-<h2>PUT AWAY HISTORY</h2>
-<div id="putaway_list">Loading...</div>
+<h3>Inventory by Bin</h3>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Product</th>
+<th>Bin</th>
+<th>Qty</th>
+</tr>
+</thead>
+<tbody id="inventory"></tbody>
+</table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(
+  "https://ougbokufspjduwepqepj.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwW9kRQkM3oR1CWoPG_BaiHbBKHOVQ"
+);
 
-async function putAway(){
-  const product_id = document.getElementById('product_id').value;
-  const lot = document.getElementById('lot').value;
-  const exp = document.getElementById('exp').value;
-  const qty = document.getElementById('qty').value;
-  const bin_id = document.getElementById('bin_id').value;
+loadProducts();
+loadBins();
+loadInventory();
 
-  await supabase.from('put_away').insert([{
-    product_id,
-    lot,
-    expiration_date: exp,
-    qty,
-    bin_id
-  }]);
-
-  alert('Put Away Done');
-  loadPutAway();
+async function loadProducts() {
+  let { data } = await supabase.from("products").select("*");
+  let html = "";
+  for (const p of data) {
+    html += `<option value="${p.id}">${p.name}</option>`;
+  }
+  document.getElementById("product").innerHTML = html;
 }
 
-async function loadPutAway(){
+async function loadBins() {
+  let { data } = await supabase.from("bins").select("*");
+  let html = "";
+  for (const b of data) {
+    html += `<option value="${b.id}">${b.name}</option>`;
+  }
+  document.getElementById("bin").innerHTML = html;
+}
+
+async function putAway() {
+  const product_id = document.getElementById("product").value;
+  const bin_id = document.getElementById("bin").value;
+  const qty = document.getElementById("qty").value;
+
+  await supabase.from("inventory_by_bin").insert([
+    { product_id, bin_id, qty }
+  ]);
+
+  await supabase.from("put_away").insert([
+    { product_id, bin_id, qty }
+  ]);
+
+  alert("Put Away Done");
+  location.reload();
+}
+
+async function loadInventory() {
   let { data } = await supabase
-    .from('put_away')
-    .select('*')
-    .order('created_at', { ascending:false });
+    .from("inventory_by_bin")
+    .select(`
+      qty,
+      products(name),
+      bins(name)
+    `);
 
-  let html = '';
+  let html = "";
 
-  data.forEach(p => {
+  for (const i of data) {
     html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
-        Product: ${p.product_id}<br>
-        Qty: ${p.qty}<br>
-        Bin: ${p.bin_id}<br>
-        Lot: ${p.lot}
-      </div>
+      <tr>
+        <td>${i.products.name}</td>
+        <td>${i.bins.name}</td>
+        <td>${i.qty}</td>
+      </tr>
     `;
-  });
+  }
 
-  document.getElementById('putaway_list').innerHTML = html;
+  document.getElementById("inventory").innerHTML = html;
 }
-
-loadPutAway();
 </script>
 
 </body>
