@@ -16,8 +16,8 @@ async function loadDashboard() {
     .select("total, created_at");
 
   let salesToday = 0;
-  for (const inv of invoices) {
-    if (inv.created_at.startsWith(today)) {
+  for (const inv of invoices || []) {
+    if (inv.created_at && inv.created_at.startsWith(today)) {
       salesToday += inv.total || 0;
     }
   }
@@ -29,8 +29,8 @@ async function loadDashboard() {
     .select("created_at");
 
   let ordersToday = 0;
-  for (const o of orders) {
-    if (o.created_at.startsWith(today)) {
+  for (const o of orders || []) {
+    if (o.created_at && o.created_at.startsWith(today)) {
       ordersToday++;
     }
   }
@@ -42,7 +42,7 @@ async function loadDashboard() {
     .select("stock, cost");
 
   let inventoryValue = 0;
-  for (const p of products) {
+  for (const p of products || []) {
     inventoryValue += (p.stock || 0) * (p.cost || 0);
   }
   document.getElementById("inventoryValue").innerText = "$" + inventoryValue.toFixed(2);
@@ -53,7 +53,7 @@ async function loadDashboard() {
     .select("stock, min_stock");
 
   let lowStock = 0;
-  for (const p of lowProducts) {
+  for (const p of lowProducts || []) {
     if ((p.stock || 0) <= (p.min_stock || 0)) {
       lowStock++;
     }
