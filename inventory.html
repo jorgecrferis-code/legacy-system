@@ -1,73 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Inventory</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Inventory</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
 <h2>INVENTORY</h2>
 
-<input
-  type="text"
-  id="search"
-  placeholder="Search product..."
-  style="width:100%; padding:10px; font-size:16px;"
-  onkeyup="loadInventory()"
-/>
-
-<br><br>
-
-<div id="inventory">Loading...</div>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Product</th>
+<th>On Hand</th>
+<th>On Order</th>
+<th>Allocated</th>
+<th>Available</th>
+</tr>
+</thead>
+<tbody id="inventory"></tbody>
+</table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function loadInventory() {
-  let search = document.getElementById('search').value;
-
-  let query = supabase
-    .from('inventory_summary')
-    .select('*')
-    .order('name');
-
-  if (search) {
-    query = query.ilike('name', '%' + search + '%');
-  }
-
-  let { data, error } = await query;
-
-  if (error) {
-    document.getElementById('inventory').innerHTML = error.message;
-    return;
-  }
-
-  let html = '';
-
-  (data || []).forEach(item => {
-    html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
-        <b>${item.name || ''}</b><br>
-        On Hand: <b>${Number(item.qty_on_hand || 0)}</b><br>
-        Allocated: ${Number(item.qty_allocated || 0)}<br>
-        Available: <b>${Number(item.available || 0)}</b><br>
-        On Order: ${Number(item.on_order || 0)}<br>
-        Box Weight: ${item.box_weight || '-'}<br>
-        Type: ${item.frozen_fresh || '-'}<br>
-        Next Expiration: ${item.next_expiration || '-'}
-      </div>
-    `;
-  });
-
-  document.getElementById('inventory').innerHTML = html || 'No inventory found';
-}
-
 loadInventory();
+
+async function loadInventory() {
+  let { data } = await supabase.from("products").select("*");
+
+  let html = "";
+
+  for (const p of data) {
+    html += `
+      <tr>
+        <td>${p.name}</td>
+        <td>${p.on_hand || 0}</td>
+        <td>${p.on_order || 0}</td>
+        <td>${p.allocated || 0}</td>
+        <td>${p.available || 0}</td>
+      </tr>
+    `;
+  }
+
+  document.getElementById("inventory").innerHTML = html;
+}
 </script>
 
 </body>
