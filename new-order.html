@@ -1,15 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>New Order</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>NEW ORDER</h2>
+
+<label><b>Customer:</b></label><br>
+<input type="text" id="customer" style="width:100%; padding:10px;"><br><br>
+
+<label><b>Notes:</b></label><br>
+<input type="text" id="notes" style="width:100%; padding:10px;"><br><br>
+
+<h3>Add Items</h3>
+
+<label>Product:</label><br>
+<select id="product" style="width:100%; padding:10px;"></select><br><br>
+
+<label>Qty:</label><br>
+<input type="number" id="qty" style="width:100%; padding:10px;"><br><br>
+
+<button onclick="addItem()">Add Item</button>
+
+<h3>Items</h3>
+<div id="items" style="background:white; padding:15px;"></div>
+
+<br>
+<button onclick="saveOrder()">SAVE ORDER</button>
+
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "COLE_SUA_ANON_AQUI";
+const SUPABASE_ANON_KEY = "SUA_ANON_KEY_AQUI";
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let items = [];
 
 loadProducts();
 
 async function loadProducts() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('products')
         .select('*')
         .order('name');
@@ -57,7 +92,7 @@ async function saveOrder() {
     const customer = document.getElementById("customer").value;
     const notes = document.getElementById("notes").value;
 
-    const { data: order, error } = await supabase
+    const { data: order, error } = await supabaseClient
         .from('orders')
         .insert([{ customer_name: customer, notes: notes, status: 'waiting picking' }])
         .select()
@@ -69,7 +104,7 @@ async function saveOrder() {
     }
 
     for (let item of items) {
-        await supabase.from('order_items').insert([{
+        await supabaseClient.from('order_items').insert([{
             order_id: order.id,
             product_name: item.product,
             qty: item.qty,
@@ -80,3 +115,6 @@ async function saveOrder() {
     window.location.href = "/orders-waiting-picking.html";
 }
 </script>
+
+</body>
+</html>
