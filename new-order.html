@@ -43,11 +43,9 @@ let items = [];
 loadProducts();
 
 async function loadProducts() {
-  const { data, error } = await supabaseClient
+  const { data } = await supabaseClient
     .from("products")
     .select("*");
-
-  console.log(data);
 
   const select = document.getElementById("product");
   select.innerHTML = "";
@@ -82,20 +80,20 @@ async function saveOrder() {
   const customer = document.getElementById("customer").value;
   const notes = document.getElementById("notes").value;
 
-  const { data, error } = await supabaseClient
+  const { data: order } = await supabaseClient
     .from("orders")
     .insert([{ customer_name: customer, notes: notes, status: "waiting" }])
     .select()
     .single();
 
-  const orderId = data.id;
+  const orderId = order.id;
 
   for (const item of items) {
     await supabaseClient.from("order_items").insert([
       {
         order_id: orderId,
         product_id: item.product_id,
-        qty: item.qty
+        qty_boxes: item.qty
       }
     ]);
   }
