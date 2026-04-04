@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Picking</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
@@ -14,69 +13,41 @@
 <div id="items">Loading...</div>
 
 <br>
-<button onclick="finishPicking()" style="padding:12px 20px; font-size:16px;">FINISH PICKING</button>
+<button onclick="finish()" style="padding:15px 25px; font-size:18px;">FINISH PICKING</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/script.js"></script>
 
 <script>
-const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-const urlParams = new URLSearchParams(window.location.search);
-const orderId = urlParams.get('order_id');
+const params = new URLSearchParams(window.location.search);
+const order_id = params.get("order_id");
 
 async function loadItems() {
-  let { data, error } = await supabase
-    .from('order_items')
-    .select('*, products(name)')
-    .eq('order_id', orderId);
+  const items = await getPickingItems(order_id);
 
-  if (error) {
-    document.getElementById('items').innerHTML = error.message;
-    return;
-  }
+  let html = "";
 
-  let html = '';
-
-  (data || []).forEach(item => {
+  items.forEach(i => {
     html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
-        <b>${item.products ? item.products.name : ''}</b><br>
-        Qty Boxes: ${item.qty_boxes}<br>
-        Price: $${Number(item.price || 0).toFixed(2)}<br>
-        Total: $${Number(item.total || 0).toFixed(2)}
+      <div style="background:white;padding:15px;margin:10px;border-radius:8px;">
+        ${i.product_name} - ${i.qty}
+        <br><br>
+        <button onclick="pick(${i.id})">PICK</button>
       </div>
     `;
   });
 
-  document.getElementById('items').innerHTML = html || 'No items found';
+  document.getElementById("items").innerHTML = html;
 }
 
-async function finishPicking() {
-  let { data: items, error } = await supabase
-    .from('order_items')
-    .select('*')
-    .eq('order_id', orderId);
+async function pick(id) {
+  await markItemPicked(id);
+  loadItems();
+}
 
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
-  for (let item of (items || [])) {
-    await supabase.rpc('pick_inventory', {
-      p_product_id: item.product_id,
-      p_qty: item.qty_boxes,
-      p_order_id: Number(orderId)
-    });
-  }
-
-  await supabase
-    .from('orders')
-    .update({ status: 'packing' })
-    .eq('id', orderId);
-
-  alert('Picking Finished');
-  window.location.href = 'packing.html';
+async function finish() {
+  await finishPicking(order_id);
+  window.location.href = "/packing.html?order_id=" + order_id;
 }
 
 loadItems();
