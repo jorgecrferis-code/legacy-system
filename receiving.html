@@ -58,13 +58,48 @@ async function loadPO() {
 
 async function receivePO(poId) {
 
-  // marcar PO como recebido
+  // pegar itens do PO
+  let { data: items } = await supabase
+    .from("purchase_order_items")
+    .select("*")
+    .eq("po_id", poId);
+
+  for (const item of items) {
+
+    // aumentar estoque
+    let { data: product } = await supabase
+      .from("products")
+      .select("stock")
+      .eq("id", item.product_id)
+      .single();
+
+    let newStock = Number(product.stock) + Number(item.qty);
+
+    await supabase
+      .from("products")
+      .update({ stock: newStock })
+      .eq("id", item.product_id);
+
+    // criar transação
+    await supabase
+      .from("inventory_transactions")
+      .insert([
+        {
+          product_id: item.product_id,
+          qty: item.qty,
+          type: "RECEIVING",
+          reference: "PO " + poId
+        }
+      ]);
+  }
+
+  // fechar PO
   await supabase
     .from("purchase_orders")
     .update({ status: "received" })
     .eq("id", poId);
 
-  alert("PO Received and Inventory Updated");
+  alert("Inventory Updated from PO!");
   location.reload();
 }
 </script>
