@@ -1,61 +1,77 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Legacy - Packing</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Packing</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
 <h2>PACKING</h2>
 
-<div id="orders">Loading...</div>
+<div id="orderInfo">Loading...</div>
+
+<h3>Items</h3>
+<div id="items"></div>
+
+<br>
+<button onclick="finishPacking()">FINISH PACKING</button>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "COLE_SUA_ANON_KEY_AQUI";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function loadOrders() {
-  let { data, error } = await supabase
-    .from('orders')
-    .select('*, customers(customer_name)')
-    .eq('status', 'packing')
-    .order('id', { ascending: false });
+const params = new URLSearchParams(window.location.search);
+const orderId = params.get("order_id");
 
-  if (error) {
-    document.getElementById('orders').innerHTML = error.message;
-    return;
-  }
+loadOrder();
+
+async function loadOrder() {
+
+  const { data: order } = await supabaseClient
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .single();
+
+  document.getElementById("orderInfo").innerHTML =
+    "Order: " + order.id + "<br>" +
+    "Customer: " + order.customer_name;
+
+  const { data: items } = await supabaseClient
+    .from("order_items")
+    .select("*")
+    .eq("order_id", orderId);
 
   let html = "";
 
-  data.forEach(order => {
-    html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px;">
-        <b>Order #${order.id}</b><br>
-        Customer: ${order.customers ? order.customers.customer_name : ''}<br><br>
-        <button onclick="finishPacking(${order.id})">FINISH PACKING</button>
-      </div>
-    `;
-  });
+  for (const item of items) {
 
-  document.getElementById('orders').innerHTML = html;
+    const { data: product } = await supabaseClient
+      .from("products")
+      .select("name_en")
+      .eq("id", item.product_id)
+      .single();
+
+    html += item.qty_boxes + " - " + product.name_en + "<br>";
+  }
+
+  document.getElementById("items").innerHTML = html;
 }
 
-async function finishPacking(orderId) {
-  await supabase
-    .from('orders')
-    .update({ status: 'staged' })
-    .eq('id', orderId);
+async function finishPacking() {
+  await supabaseClient
+    .from("orders")
+    .update({ status: "packed" })
+    .eq("id", orderId);
 
-  loadOrders();
+  alert("Packing Finished!");
+  window.location.href = "ready-to-load.html";
 }
-
-loadOrders();
 </script>
 
 </body>
