@@ -14,13 +14,10 @@
 <table border="1" cellpadding="5">
 <thead>
 <tr>
-<th>Order</th>
-<th>Revenue</th>
-<th>Cost</th>
+<th>Product</th>
+<th>Qty</th>
 <th>Profit</th>
-<th>Margin %</th>
-<th>Commission %</th>
-<th>Commission $</th>
+<th>Commission (10%)</th>
 </tr>
 </thead>
 <tbody id="commissions"></tbody>
@@ -38,67 +35,34 @@ loadCommission();
 
 async function loadCommission() {
 
-  let { data, error } = await supabase
+  let { data } = await supabase
     .from("order_items")
     .select(`
       qty,
       price,
-      orders(id),
-      products(cost)
+      products(name, cost)
     `);
 
-  let orders = {};
+  let html = "";
   let totalCommission = 0;
 
   for (const item of data) {
-
-    let orderId = item.orders.id;
-    let revenue = item.price * item.qty;
-    let cost = item.products.cost * item.qty;
-
-    if (!orders[orderId]) {
-      orders[orderId] = { revenue: 0, cost: 0 };
-    }
-
-    orders[orderId].revenue += revenue;
-    orders[orderId].cost += cost;
-  }
-
-  let html = "";
-
-  for (const orderId in orders) {
-
-    let revenue = orders[orderId].revenue;
-    let cost = orders[orderId].cost;
-    let profit = revenue - cost;
-    let margin = (profit / revenue) * 100;
-
-    let commissionRate = 0;
-
-    if (margin <= 5) commissionRate = 0.01;
-    else if (margin <= 8) commissionRate = 0.05;
-    else if (margin <= 13) commissionRate = 0.10;
-    else commissionRate = 0.15;
-
-    let commission = profit * commissionRate;
+    let profit = (item.price - item.products.cost) * item.qty;
+    let commission = profit * 0.10;
     totalCommission += commission;
 
     html += `
       <tr>
-        <td>${orderId}</td>
-        <td>${revenue.toFixed(2)}</td>
-        <td>${cost.toFixed(2)}</td>
+        <td>${item.products.name}</td>
+        <td>${item.qty}</td>
         <td>${profit.toFixed(2)}</td>
-        <td>${margin.toFixed(2)}%</td>
-        <td>${(commissionRate*100)}%</td>
         <td>${commission.toFixed(2)}</td>
       </tr>
     `;
   }
 
   document.getElementById("commissions").innerHTML = html;
-  document.getElementById("totalCommission").innerText =
-    "Total Commission: $" + totalCommission.toFixed(2);
+  document.getElementById("totalCommission").innerText = "Total Commission: $" + totalCommission.toFixed(2);
 }
 </script>
 
