@@ -32,7 +32,6 @@ loadOrder();
 
 async function loadOrder() {
 
-  // ORDER INFO
   const { data: order } = await supabaseClient
     .from("orders")
     .select("*")
@@ -43,21 +42,22 @@ async function loadOrder() {
     "Order: " + order.id + "<br>" +
     "Customer: " + order.customer_name;
 
-  // ORDER ITEMS + PRODUCTS
   const { data: items } = await supabaseClient
     .from("order_items")
-    .select(`
-      qty_boxes,
-      products (
-        name_en
-      )
-    `)
+    .select("*")
     .eq("order_id", orderId);
 
   let html = "";
 
   for (const item of items) {
-    html += item.qty_boxes + " - " + item.products.name_en + "<br>";
+
+    const { data: product } = await supabaseClient
+      .from("products")
+      .select("name_en")
+      .eq("id", item.product_id)
+      .single();
+
+    html += item.qty_boxes + " - " + product.name_en + "<br>";
   }
 
   document.getElementById("items").innerHTML = html;
