@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Orders Waiting Picking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>ORDERS WAITING PICKING</h2>
+
+<div id="orders">Loading...</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/script.js"></script>
+
+<script>
+async function loadOrders() {
+  const orders = await getOrdersByStatus('waiting_picking');
+
+  let html = "";
+
+  orders.forEach(o => {
+    html += `
+      <div style="background:white;padding:15px;margin:10px;border-radius:8px;">
+        Order #${o.id} - ${o.customer_name}
+        <br><br>
+        <button onclick="openPicking(${o.id})">OPEN PICKING</button>
+      </div>
+    `;
+  });
+
+  document.getElementById("orders").innerHTML = html;
+}
+
+function openPicking(id) {
+  window.location.href = "/picking.html?order_id=" + id;
+}
+
+loadOrders();
+</script>
+
+</body>
+</html>
