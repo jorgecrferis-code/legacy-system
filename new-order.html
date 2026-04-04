@@ -1,3 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>New Order</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>NEW ORDER</h2>
+
+<label>Customer</label><br>
+<select id="customer"></select>
+<br><br>
+
+<label>Product</label><br>
+<select id="product"></select>
+<br><br>
+
+<label>Qty</label><br>
+<input id="qty" type="number">
+<br><br>
+
+<label>Price</label><br>
+<input id="price" type="number">
+<br><br>
+
+<button onclick="addItem()">Add Item</button>
+<button onclick="createOrder()">Create Order</button>
+
+<br><br>
+
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Product</th>
+<th>Qty</th>
+<th>Price</th>
+</tr>
+</thead>
+<tbody id="items"></tbody>
+</table>
+
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
@@ -132,3 +177,6 @@ async function createOrder() {
   location.reload();
 }
 </script>
+
+</body>
+</html>
