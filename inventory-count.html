@@ -1,75 +1,103 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Inventory Count</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Inventory Count</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
 <h2>INVENTORY COUNT</h2>
 
-<input id="product_id" placeholder="Product ID"><br><br>
-<input id="bin_id" placeholder="Bin ID"><br><br>
-<input id="system_qty" placeholder="System Qty"><br><br>
-<input id="counted_qty" placeholder="Counted Qty"><br><br>
-
+<select id="product"></select>
+<input id="counted" type="number" placeholder="Counted Qty">
 <button onclick="saveCount()">Save Count</button>
 
-<h2>COUNT HISTORY</h2>
-<div id="counts">Loading...</div>
+<h3>Count History</h3>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Product</th>
+<th>System</th>
+<th>Counted</th>
+<th>Difference</th>
+</tr>
+</thead>
+<tbody id="history"></tbody>
+</table>
 
 <script>
-const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+const supabase = window.supabase.createClient(
+  "https://ougbokufspjduwepqepj.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ"
+);
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+loadProducts();
+loadHistory();
 
-async function saveCount(){
-  const product_id = document.getElementById('product_id').value;
-  const bin_id = document.getElementById('bin_id').value;
-  const system_qty = document.getElementById('system_qty').value;
-  const counted_qty = document.getElementById('counted_qty').value;
+async function loadProducts() {
+  let { data } = await supabase.from("products").select("*");
+  let html = "";
+  for (const p of data) {
+    html += `<option value="${p.id}" data-stock="${p.stock}">${p.name}</option>`;
+  }
+  document.getElementById("product").innerHTML = html;
+}
+
+async function saveCount() {
+  const product = document.getElementById("product");
+  const product_id = product.value;
+  const system_qty = product.options[product.selectedIndex].dataset.stock;
+  const counted_qty = document.getElementById("counted").value;
+
   const difference = counted_qty - system_qty;
 
-  await supabase.from('inventory_count').insert([{
-    product_id,
-    bin_id,
-    system_qty,
-    counted_qty,
-    difference
-  }]);
+  await supabase.from("inventory_count").insert([
+    {
+      product_id,
+      system_qty,
+      counted_qty,
+      difference
+    }
+  ]);
 
-  alert('Count Saved');
-  loadCounts();
+  // atualizar estoque
+  await supabase
+    .from("products")
+    .update({ stock: counted_qty })
+    .eq("id", product_id);
+
+  alert("Inventory Adjusted");
+  location.reload();
 }
 
-async function loadCounts(){
+async function loadHistory() {
   let { data } = await supabase
-    .from('inventory_count')
-    .select('*')
-    .order('counted_at', { ascending:false });
+    .from("inventory_count")
+    .select(`
+      system_qty,
+      counted_qty,
+      difference,
+      products(name)
+    `);
 
-  let html = '';
+  let html = "";
 
-  data.forEach(c => {
+  for (const h of data) {
     html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
-        Product: ${c.product_id}<br>
-        Bin: ${c.bin_id}<br>
-        System: ${c.system_qty}<br>
-        Counted: ${c.counted_qty}<br>
-        Difference: <b>${c.difference}</b>
-      </div>
+      <tr>
+        <td>${h.products.name}</td>
+        <td>${h.system_qty}</td>
+        <td>${h.counted_qty}</td>
+        <td>${h.difference}</td>
+      </tr>
     `;
-  });
+  }
 
-  document.getElementById('counts').innerHTML = html;
+  document.getElementById("history").innerHTML = html;
 }
-
-loadCounts();
 </script>
 
 </body>
