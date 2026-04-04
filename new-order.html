@@ -38,12 +38,17 @@
 <script>
 let items = [];
 
-// LOAD PRODUCTS FROM SUPABASE
+// LOAD PRODUCTS FROM DATABASE
 async function loadProducts() {
   const { data, error } = await supabase
     .from('products')
     .select('*')
     .order('name');
+
+  if (error) {
+    alert("Error loading products");
+    return;
+  }
 
   let html = "";
 
@@ -93,6 +98,11 @@ async function saveOrder() {
     ])
     .select();
 
+  if (error) {
+    alert("Error creating order");
+    return;
+  }
+
   const order_id = data[0].id;
 
   for (let i of items) {
@@ -109,7 +119,6 @@ async function saveOrder() {
   }
 
   alert("Order Created!");
-
   window.location.href = "/orders-waiting-picking.html";
 }
 
