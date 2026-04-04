@@ -1,17 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Commission Report</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Commission Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
 <h2>COMMISSION REPORT</h2>
 
-<div id="commissions">Loading...</div>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Order</th>
+<th>Revenue</th>
+<th>Cost</th>
+<th>Profit</th>
+<th>Margin %</th>
+<th>Commission %</th>
+<th>Commission $</th>
+</tr>
+</thead>
+<tbody id="report"></tbody>
+</table>
+
+<h3 id="totalCommission"></h3>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -19,29 +34,72 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function loadCommission(){
+loadReport();
+
+async function loadReport() {
+
   let { data } = await supabase
-    .from('commission_report')
-    .select('*');
+    .from("order_items")
+    .select(`
+      qty,
+      price,
+      orders(id),
+      products(cost)
+    `);
 
-  let html = '';
+  let orders = {};
+  let totalCommission = 0;
 
-  data.forEach(c => {
+  for (const item of data) {
+
+    let orderId = item.orders.id;
+    let revenue = item.price * item.qty;
+    let cost = item.products.cost * item.qty;
+
+    if (!orders[orderId]) {
+      orders[orderId] = { revenue: 0, cost: 0 };
+    }
+
+    orders[orderId].revenue += revenue;
+    orders[orderId].cost += cost;
+  }
+
+  let html = "";
+
+  for (const orderId in orders) {
+
+    let revenue = orders[orderId].revenue;
+    let cost = orders[orderId].cost;
+    let profit = revenue - cost;
+    let margin = (profit / revenue) * 100;
+
+    let commissionRate = 0;
+
+    if (margin <= 5) commissionRate = 0.01;
+    else if (margin <= 8) commissionRate = 0.05;
+    else if (margin <= 13) commissionRate = 0.10;
+    else commissionRate = 0.15;
+
+    let commission = profit * commissionRate;
+    totalCommission += commission;
+
     html += `
-      <div style="background:white; padding:15px; margin-bottom:10px;">
-        Salesperson: ${c.salesperson}<br>
-        Order: ${c.order_id}<br>
-        Customer: ${c.customer_name}<br>
-        Revenue: $${Number(c.revenue).toFixed(2)}<br>
-        Commission: <b>$${Number(c.commission).toFixed(2)}</b>
-      </div>
+      <tr>
+        <td>${orderId}</td>
+        <td>${revenue.toFixed(2)}</td>
+        <td>${cost.toFixed(2)}</td>
+        <td>${profit.toFixed(2)}</td>
+        <td>${margin.toFixed(2)}%</td>
+        <td>${(commissionRate*100)}%</td>
+        <td>${commission.toFixed(2)}</td>
+      </tr>
     `;
-  });
+  }
 
-  document.getElementById('commissions').innerHTML = html;
+  document.getElementById("report").innerHTML = html;
+  document.getElementById("totalCommission").innerText =
+    "Total Commission: $" + totalCommission.toFixed(2);
 }
-
-loadCommission();
 </script>
 
 </body>
