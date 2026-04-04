@@ -12,10 +12,10 @@
 <h2>NEW ORDER</h2>
 
 Customer:<br>
-<input id="customer" style="width:300px"><br><br>
+<input id="customer"><br><br>
 
 Notes:<br>
-<input id="notes" style="width:300px"><br><br>
+<input id="notes"><br><br>
 
 <h3>Add Items</h3>
 
@@ -34,7 +34,7 @@ Qty:<br>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "COLE_SUA_ANON_AQUI";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -45,22 +45,18 @@ loadProducts();
 async function loadProducts() {
   const { data, error } = await supabaseClient
     .from("products")
-    .select("*")
-    .order("name_en");
+    .select("*");
+
+  console.log(data);
 
   const select = document.getElementById("product");
   select.innerHTML = "";
 
-  let added = {};
-
   data.forEach(p => {
-    if(!added[p.id]) {
-      let option = document.createElement("option");
-      option.value = p.id;
-      option.text = p.name_en + " (" + (p.name_pt || "") + " / " + (p.name_es || "") + ")";
-      select.appendChild(option);
-      added[p.id] = true;
-    }
+    let option = document.createElement("option");
+    option.value = p.id;
+    option.text = p.name_en + " (" + p.name_pt + " / " + p.name_es + ")";
+    select.appendChild(option);
   });
 }
 
