@@ -23,7 +23,7 @@
 <th>Commission $</th>
 </tr>
 </thead>
-<tbody id="report"></tbody>
+<tbody id="commissions"></tbody>
 </table>
 
 <h3 id="totalCommission"></h3>
@@ -34,11 +34,11 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-loadReport();
+loadCommission();
 
-async function loadReport() {
+async function loadCommission() {
 
-  let { data } = await supabase
+  let { data, error } = await supabase
     .from("order_items")
     .select(`
       qty,
@@ -96,7 +96,7 @@ async function loadReport() {
     `;
   }
 
-  document.getElementById("report").innerHTML = html;
+  document.getElementById("commissions").innerHTML = html;
   document.getElementById("totalCommission").innerText =
     "Total Commission: $" + totalCommission.toFixed(2);
 }
