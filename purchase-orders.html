@@ -1,31 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Purchase Orders</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Purchase Orders</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
-<h2>PURCHASE ORDER</h2>
+<h2>PURCHASE ORDERS</h2>
 
-<input id="vendor" placeholder="Vendor"><br><br>
-<input id="expected_date" placeholder="Expected Date"><br><br>
-
+<input id="vendor" placeholder="Vendor">
 <button onclick="createPO()">Create PO</button>
 
-<h2>ADD ITEM TO PO</h2>
-
-<input id="po_id" placeholder="PO ID"><br><br>
-<input id="product_id" placeholder="Product ID"><br><br>
-<input id="qty" placeholder="Qty"><br><br>
-
-<button onclick="addItem()">Add Item</button>
-
-<h2>OPEN PURCHASE ORDERS</h2>
-<div id="po_list">Loading...</div>
+<h3>Open Purchase Orders</h3>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>PO</th>
+<th>Vendor</th>
+<th>Status</th>
+<th>Open</th>
+</tr>
+</thead>
+<tbody id="poList"></tbody>
+</table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -33,56 +33,40 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function createPO(){
-  const vendor = document.getElementById('vendor').value;
-  const expected_date = document.getElementById('expected_date').value;
-
-  await supabase.from('purchase_orders').insert([{
-    vendor,
-    expected_date
-  }]);
-
-  alert('PO Created');
-  loadPO();
-}
-
-async function addItem(){
-  const po_id = document.getElementById('po_id').value;
-  const product_id = document.getElementById('product_id').value;
-  const qty = document.getElementById('qty').value;
-
-  await supabase.from('purchase_order_items').insert([{
-    po_id,
-    product_id,
-    qty_ordered: qty
-  }]);
-
-  alert('Item Added');
-}
-
-async function loadPO(){
-  let { data } = await supabase
-    .from('purchase_orders')
-    .select('*')
-    .order('id', { ascending:false });
-
-  let html = '';
-
-  data.forEach(po => {
-    html += `
-      <div style="background:white; padding:15px; margin-bottom:10px;">
-        PO: ${po.id}<br>
-        Vendor: ${po.vendor}<br>
-        Date: ${po.order_date}<br>
-        Status: ${po.status}
-      </div>
-    `;
-  });
-
-  document.getElementById('po_list').innerHTML = html;
-}
-
 loadPO();
+
+async function createPO() {
+  const vendor = document.getElementById("vendor").value;
+
+  await supabase.from("purchase_orders").insert([
+    { vendor: vendor, status: "open" }
+  ]);
+
+  location.reload();
+}
+
+async function loadPO() {
+  let { data } = await supabase
+    .from("purchase_orders")
+    .select("*");
+
+  let html = "";
+
+  for (const po of data) {
+    html += `
+      <tr>
+        <td>${po.id}</td>
+        <td>${po.vendor}</td>
+        <td>${po.status}</td>
+        <td>
+          <a href="purchase-order.html?po_id=${po.id}">OPEN</a>
+        </td>
+      </tr>
+    `;
+  }
+
+  document.getElementById("poList").innerHTML = html;
+}
 </script>
 
 </body>
