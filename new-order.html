@@ -1,130 +1,82 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>New Order</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-
-<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
-
-<h2>NEW ORDER</h2>
-
-<label><b>Customer:</b></label><br>
-<input type="text" id="customer" style="width:100%; padding:10px;"><br><br>
-
-<label><b>Notes:</b></label><br>
-<input type="text" id="notes" style="width:100%; padding:10px;"><br><br>
-
-<h3>Add Items</h3>
-
-<label>Product:</label><br>
-<select id="product" style="width:100%; padding:10px;"></select><br>
-
-<label>Qty:</label><br>
-<input type="number" id="qty" style="width:100%; padding:10px;"><br><br>
-
-<button onclick="addItem()">Add Item</button>
-
-<h3>Items</h3>
-<div id="items" style="background:white; padding:15px;"></div>
-
-<br>
-<button onclick="saveOrder()">SAVE ORDER</button>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/script.js"></script>
-
 <script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "COLE_SUA_ANON_AQUI";
+
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 let items = [];
 
-// LOAD PRODUCTS FROM DATABASE
-async function loadProducts() {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .order('name');
-
-  if (error) {
-    alert("Error loading products");
-    return;
-  }
-
-  let html = "";
-
-  data.forEach(p => {
-    html += `<option value="${p.name}">${p.name}</option>`;
-  });
-
-  document.getElementById("product").innerHTML = html;
-}
-
-// ADD ITEM
-function addItem() {
-  const product = document.getElementById("product").value;
-  const qty = document.getElementById("qty").value;
-
-  if (!product || !qty) return;
-
-  items.push({ product, qty });
-
-  renderItems();
-}
-
-// SHOW ITEMS
-function renderItems() {
-  let html = "";
-
-  items.forEach(i => {
-    html += `<div>${i.product} - ${i.qty}</div>`;
-  });
-
-  document.getElementById("items").innerHTML = html;
-}
-
-// SAVE ORDER
-async function saveOrder() {
-  const customer = document.getElementById("customer").value;
-  const notes = document.getElementById("notes").value;
-
-  const { data, error } = await supabase
-    .from('orders')
-    .insert([
-      {
-        customer_name: customer,
-        notes: notes,
-        status: 'waiting_picking'
-      }
-    ])
-    .select();
-
-  if (error) {
-    alert("Error creating order");
-    return;
-  }
-
-  const order_id = data[0].id;
-
-  for (let i of items) {
-    await supabase
-      .from('order_items')
-      .insert([
-        {
-          order_id: order_id,
-          product_name: i.product,
-          qty: i.qty,
-          picked: false
-        }
-      ]);
-  }
-
-  alert("Order Created!");
-  window.location.href = "/orders-waiting-picking.html";
-}
-
-// LOAD PRODUCTS WHEN PAGE OPENS
 loadProducts();
-</script>
 
-</body>
-</html>
+async function loadProducts() {
+    const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('name');
+
+    if (error) {
+        alert(error.message);
+        return;
+    }
+
+    const select = document.getElementById("product");
+    select.innerHTML = "";
+
+    data.forEach(p => {
+        const option = document.createElement("option");
+        option.value = p.name;
+        option.text = p.name;
+        select.appendChild(option);
+    });
+}
+
+function addItem() {
+    const product = document.getElementById("product").value;
+    const qty = document.getElementById("qty").value;
+
+    if (!product || !qty) return;
+
+    items.push({
+        product: product,
+        qty: qty
+    });
+
+    renderItems();
+}
+
+function renderItems() {
+    const div = document.getElementById("items");
+    div.innerHTML = "";
+
+    items.forEach(i => {
+        div.innerHTML += i.product + " - " + i.qty + "<br>";
+    });
+}
+
+async function saveOrder() {
+    const customer = document.getElementById("customer").value;
+    const notes = document.getElementById("notes").value;
+
+    const { data: order, error } = await supabase
+        .from('orders')
+        .insert([{ customer_name: customer, notes: notes, status: 'waiting picking' }])
+        .select()
+        .single();
+
+    if (error) {
+        alert(error.message);
+        return;
+    }
+
+    for (let item of items) {
+        await supabase.from('order_items').insert([{
+            order_id: order.id,
+            product_name: item.product,
+            qty: item.qty,
+            picked: 0
+        }]);
+    }
+
+    window.location.href = "/orders-waiting-picking.html";
+}
+</script>
