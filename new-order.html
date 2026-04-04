@@ -10,26 +10,27 @@
 
 <h2>NEW ORDER</h2>
 
-Customer:<br>
-<input type="text" id="customer"><br><br>
+<label><b>Customer:</b></label><br>
+<input type="text" id="customer" style="width:100%; padding:10px; font-size:16px;"><br><br>
 
-Notes:<br>
-<input type="text" id="notes"><br><br>
+<label><b>Notes:</b></label><br>
+<input type="text" id="notes" style="width:100%; padding:10px; font-size:16px;"><br><br>
 
 <h3>Add Items</h3>
 
-Product:<br>
-<input type="text" id="product"><br>
-Qty:<br>
-<input type="number" id="qty"><br><br>
+<label>Product:</label><br>
+<input type="text" id="product" style="width:100%; padding:10px; font-size:16px;"><br>
 
-<button onclick="addItem()">Add Item</button>
+<label>Qty:</label><br>
+<input type="number" id="qty" style="width:100%; padding:10px; font-size:16px;"><br><br>
+
+<button onclick="addItem()" style="padding:10px 20px; font-size:16px;">Add Item</button>
 
 <h3>Items</h3>
-<div id="items"></div>
+<div id="items" style="background:white; padding:15px; border-radius:8px;"></div>
 
 <br>
-<button onclick="saveOrder()">SAVE ORDER</button>
+<button onclick="saveOrder()" style="padding:15px 25px; font-size:18px;">SAVE ORDER</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/script.js"></script>
@@ -41,22 +42,38 @@ function addItem() {
   const product = document.getElementById("product").value;
   const qty = document.getElementById("qty").value;
 
+  if (!product || !qty) return;
+
   items.push({ product, qty });
 
   renderItems();
+
+  document.getElementById("product").value = "";
+  document.getElementById("qty").value = "";
 }
 
 function renderItems() {
   let html = "";
+
   items.forEach(i => {
-    html += i.product + " - " + i.qty + "<br>";
+    html += `
+      <div style="border-bottom:1px solid #ddd; padding:8px;">
+        ${i.product} - ${i.qty}
+      </div>
+    `;
   });
+
   document.getElementById("items").innerHTML = html;
 }
 
 async function saveOrder() {
   const customer = document.getElementById("customer").value;
   const notes = document.getElementById("notes").value;
+
+  if (!customer) {
+    alert("Enter customer");
+    return;
+  }
 
   const order = await createOrder(customer, notes);
 
@@ -65,7 +82,8 @@ async function saveOrder() {
   }
 
   alert("Order Created!");
-  window.location.href = "orders-waiting-picking.html";
+
+  window.location.href = "/orders-waiting-picking.html";
 }
 </script>
 
