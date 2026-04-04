@@ -25,8 +25,8 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const urlParams = new URLSearchParams(window.location.search);
-const orderId = urlParams.get("order_id");
+const params = new URLSearchParams(window.location.search);
+const orderId = params.get("order_id");
 
 loadOrder();
 
@@ -39,8 +39,8 @@ async function loadOrder() {
     .single();
 
   document.getElementById("orderInfo").innerHTML =
-    "<b>Order:</b> " + order.id + "<br>" +
-    "<b>Customer:</b> " + order.customer_name;
+    "Order: " + order.id + "<br>" +
+    "Customer: " + order.customer_name;
 
   const { data: items } = await supabaseClient
     .from("order_items")
