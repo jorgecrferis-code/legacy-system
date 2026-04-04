@@ -1,3 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h1>DASHBOARD</h1>
+
+<div style="display:flex; gap:20px; flex-wrap:wrap;">
+
+<div style="background:white; padding:20px; width:200px;">
+<h3>Sales Today</h3>
+<h2 id="salesToday">$0</h2>
+</div>
+
+<div style="background:white; padding:20px; width:200px;">
+<h3>Orders Today</h3>
+<h2 id="ordersToday">0</h2>
+</div>
+
+<div style="background:white; padding:20px; width:200px;">
+<h3>Inventory Value</h3>
+<h2 id="inventoryValue">$0</h2>
+</div>
+
+<div style="background:white; padding:20px; width:200px;">
+<h3>Low Stock</h3>
+<h2 id="lowStock">0</h2>
+</div>
+
+</div>
+
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
@@ -8,56 +45,46 @@ loadDashboard();
 
 async function loadDashboard() {
 
-  let today = new Date().toISOString().slice(0,10);
-
   // SALES TODAY
-  let { data: invoices } = await supabase
-    .from("invoices")
-    .select("total, created_at");
+  let { data: sales } = await supabase
+    .from("order_items")
+    .select("qty, price");
 
-  let salesToday = 0;
-  for (const inv of invoices || []) {
-    if (inv.created_at && inv.created_at.startsWith(today)) {
-      salesToday += inv.total || 0;
-    }
-  }
-  document.getElementById("salesToday").innerText = "$" + salesToday.toFixed(2);
+  let totalSales = 0;
+  sales.forEach(s => {
+    totalSales += s.qty * s.price;
+  });
+
+  document.getElementById("salesToday").innerText = "$" + totalSales.toFixed(2);
 
   // ORDERS TODAY
-  let { data: orders } = await supabase
+  let { count } = await supabase
     .from("orders")
-    .select("created_at");
+    .select("*", { count: "exact", head: true });
 
-  let ordersToday = 0;
-  for (const o of orders || []) {
-    if (o.created_at && o.created_at.startsWith(today)) {
-      ordersToday++;
-    }
-  }
-  document.getElementById("ordersToday").innerText = ordersToday;
+  document.getElementById("ordersToday").innerText = count;
 
   // INVENTORY VALUE
-  let { data: products } = await supabase
-    .from("products")
-    .select("stock, cost");
+  let { data: inventory } = await supabase
+    .from("inventory")
+    .select("qty, products(cost)");
 
-  let inventoryValue = 0;
-  for (const p of products || []) {
-    inventoryValue += (p.stock || 0) * (p.cost || 0);
-  }
-  document.getElementById("inventoryValue").innerText = "$" + inventoryValue.toFixed(2);
+  let totalInventory = 0;
+  inventory.forEach(i => {
+    totalInventory += i.qty * i.products.cost;
+  });
+
+  document.getElementById("inventoryValue").innerText = "$" + totalInventory.toFixed(2);
 
   // LOW STOCK
-  let { data: lowProducts } = await supabase
+  let { count: low } = await supabase
     .from("products")
-    .select("stock, min_stock");
+    .select("*", { count: "exact", head: true })
+    .lt("stock", 10);
 
-  let lowStock = 0;
-  for (const p of lowProducts || []) {
-    if ((p.stock || 0) <= (p.min_stock || 0)) {
-      lowStock++;
-    }
-  }
-  document.getElementById("lowStock").innerText = lowStock;
+  document.getElementById("lowStock").innerText = low;
 }
 </script>
+
+</body>
+</html>
