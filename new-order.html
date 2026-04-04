@@ -1,107 +1,63 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>New Order</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-
-<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
-
-<h2>NEW ORDER</h2>
-
-Customer:<br>
-<input id="customer"><br><br>
-
-Notes:<br>
-<input id="notes"><br><br>
-
-<h3>Add Items</h3>
-
-Product:<br>
-<select id="product"></select><br><br>
-
-Qty:<br>
-<input id="qty" type="number"><br><br>
-
-<button onclick="addItem()">Add Item</button>
-
-<h3>Items</h3>
-<div id="items"></div><br>
-
-<button onclick="saveOrder()">SAVE ORDER</button>
-
 <script>
-const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
-
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-let items = [];
-
-loadProducts();
-
-async function loadProducts() {
-  const { data } = await supabaseClient
-    .from("products")
-    .select("*");
-
-  const select = document.getElementById("product");
-  select.innerHTML = "";
-
-  data.forEach(p => {
-    let option = document.createElement("option");
-    option.value = p.id;
-    option.text = p.name_en + " (" + p.name_pt + " / " + p.name_es + ")";
-    select.appendChild(option);
-  });
-}
-
-function addItem() {
-  const productId = document.getElementById("product").value;
-  const productText = document.getElementById("product").selectedOptions[0].text;
-  const qty = document.getElementById("qty").value;
-
-  items.push({ product_id: productId, name: productText, qty: qty });
-
-  renderItems();
-}
-
-function renderItems() {
-  let html = "";
-  items.forEach(i => {
-    html += i.qty + " - " + i.name + "<br>";
-  });
-  document.getElementById("items").innerHTML = html;
-}
-
 async function saveOrder() {
-  const customer = document.getElementById("customer").value;
-  const notes = document.getElementById("notes").value;
 
-  const { data: order } = await supabaseClient
+  const customer = document.getElementById("customer").value;
+
+  // criar order
+  let { data: order } = await supabase
     .from("orders")
-    .insert([{ customer_name: customer, notes: notes, status: "waiting" }])
+    .insert([
+      { customer_name: customer, status: "waiting" }
+    ])
     .select()
     .single();
 
   const orderId = order.id;
 
-  for (const item of items) {
-    await supabaseClient.from("order_items").insert([
-      {
-        order_id: orderId,
-        product_id: item.product_id,
-        qty_boxes: item.qty
-      }
-    ]);
+  // pegar itens da tela
+  for (const item of cart) {
+
+    // salvar order_items
+    await supabase
+      .from("order_items")
+      .insert([
+        {
+          order_id: orderId,
+          product_id: item.product_id,
+          qty: item.qty,
+          price: item.price
+        }
+      ]);
+
+    // pegar estoque atual
+    let { data: product } = await supabase
+      .from("products")
+      .select("stock")
+      .eq("id", item.product_id)
+      .single();
+
+    let newStock = Number(product.stock) - Number(item.qty);
+
+    // atualizar estoque
+    await supabase
+      .from("products")
+      .update({ stock: newStock })
+      .eq("id", item.product_id);
+
+    // criar transação inventory
+    await supabase
+      .from("inventory_transactions")
+      .insert([
+        {
+          product_id: item.product_id,
+          qty: item.qty,
+          type: "SALE",
+          reference: "ORDER " + orderId
+        }
+      ]);
   }
 
-  alert("Order Saved!");
-  location.reload();
+  alert("Order Saved and Inventory Updated!");
+  window.location.href = "orders-waiting-picking.html";
 }
 </script>
-
-</body>
-</html>
