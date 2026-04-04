@@ -1,24 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Inventory Transactions</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Inventory Ledger</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
-<h2>INVENTORY TRANSACTIONS</h2>
+<h2>INVENTORY LEDGER</h2>
 
-<input
-  id="search"
-  placeholder="Search product..."
-  style="width:100%; padding:10px; margin-bottom:20px;"
-  onkeyup="loadTransactions()"
->
-
-<div id="transactions">Loading...</div>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Date</th>
+<th>Product</th>
+<th>Qty</th>
+<th>From Bin</th>
+<th>To Bin</th>
+<th>Type</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody id="ledger"></tbody>
+</table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -26,47 +32,41 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function loadTransactions(){
-  let search = document.getElementById('search').value;
+loadLedger();
 
-  let query = supabase
-    .from('inventory_transaction_history')
-    .select('*')
-    .order('created_at', { ascending:false })
-    .limit(100);
+async function loadLedger() {
 
-  if(search){
-    query = query.ilike('product_name', '%' + search + '%');
-  }
+  let { data } = await supabase
+    .from("inventory_ledger")
+    .select(`
+      qty,
+      type,
+      reference,
+      created_at,
+      products(name),
+      bins!from_bin(name),
+      bins!to_bin(name)
+    `)
+    .order("created_at", { ascending: false });
 
-  let { data, error } = await query;
+  let html = "";
 
-  if(error){
-    document.getElementById('transactions').innerHTML = error.message;
-    return;
-  }
-
-  let html = '';
-
-  (data || []).forEach(t => {
+  for (const item of data) {
     html += `
-      <div style="background:white; border:1px solid #ddd; padding:15px; margin-bottom:10px; border-radius:8px;">
-        <b>${t.product_name || 'Product #' + t.product_id}</b><br>
-        Qty: ${t.qty}<br>
-        Type: <b>${t.transaction_type || '-'}</b><br>
-        Ref: ${t.reference_table || '-'} / ${t.reference_id || '-'}<br>
-        Bin: ${t.bin_id || '-'}<br>
-        Lot: ${t.lot || '-'}<br>
-        Exp: ${t.expiration_date || '-'}<br>
-        Date: ${t.created_at || '-'}
-      </div>
+      <tr>
+        <td>${new Date(item.created_at).toLocaleString()}</td>
+        <td>${item.products?.name || ""}</td>
+        <td>${item.qty}</td>
+        <td>${item.bins?.name || ""}</td>
+        <td>${item.to_bin?.name || ""}</td>
+        <td>${item.type}</td>
+        <td>${item.reference || ""}</td>
+      </tr>
     `;
-  });
+  }
 
-  document.getElementById('transactions').innerHTML = html || 'No transactions found';
+  document.getElementById("ledger").innerHTML = html;
 }
-
-loadTransactions();
 </script>
 
 </body>
