@@ -14,84 +14,49 @@
 <select id="product"></select>
 <select id="from_bin"></select>
 <select id="to_bin"></select>
-
 <input id="qty" type="number" placeholder="Qty">
-
-<button onclick="transfer()">TRANSFER</button>
-
-<h3>Transfers History</h3>
-<div id="history"></div>
+<button onclick="transfer()">Transfer</button>
 
 <script>
-const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+const supabase = window.supabase.createClient(
+  "https://ougbokufspjduwepqepj.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ"
+);
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+loadProducts();
+loadBins();
 
-async function load(){
-  let { data: products } = await supabase.from('products').select('id,name');
-  let { data: bins } = await supabase.from('bins').select('id,name');
-
-  let p = document.getElementById('product');
-  let f = document.getElementById('from_bin');
-  let t = document.getElementById('to_bin');
-
-  p.innerHTML='';
-  f.innerHTML='';
-  t.innerHTML='';
-
-  (products||[]).forEach(x=>{
-    p.innerHTML += `<option value="${x.id}">${x.name}</option>`;
-  });
-
-  (bins||[]).forEach(x=>{
-    f.innerHTML += `<option value="${x.id}">${x.name}</option>`;
-    t.innerHTML += `<option value="${x.id}">${x.name}</option>`;
-  });
-
-  loadHistory();
+async function loadProducts() {
+  let { data } = await supabase.from("products").select("*");
+  let html = "";
+  for (const p of data) {
+    html += `<option value="${p.id}">${p.name}</option>`;
+  }
+  document.getElementById("product").innerHTML = html;
 }
 
-async function transfer(){
-  let product_id = document.getElementById('product').value;
-  let from_bin_id = document.getElementById('from_bin').value;
-  let to_bin_id = document.getElementById('to_bin').value;
-  let qty = document.getElementById('qty').value;
-
-  await supabase.from('bin_transfers').insert([{
-    product_id,
-    from_bin_id,
-    to_bin_id,
-    qty,
-    created_by: 'admin'
-  }]);
-
-  loadHistory();
+async function loadBins() {
+  let { data } = await supabase.from("bins").select("*");
+  let html = "";
+  for (const b of data) {
+    html += `<option value="${b.id}">${b.name}</option>`;
+  }
+  document.getElementById("from_bin").innerHTML = html;
+  document.getElementById("to_bin").innerHTML = html;
 }
 
-async function loadHistory(){
-  let { data } = await supabase
-    .from('bin_transfers')
-    .select('*')
-    .order('created_at', { ascending:false })
-    .limit(20);
+async function transfer() {
+  const product_id = document.getElementById("product").value;
+  const from_bin = document.getElementById("from_bin").value;
+  const to_bin = document.getElementById("to_bin").value;
+  const qty = document.getElementById("qty").value;
 
-  let html='';
-  (data||[]).forEach(x=>{
-    html += `
-      <div style="background:white; padding:10px; margin-bottom:5px;">
-        Product ${x.product_id} |
-        From Bin ${x.from_bin_id} |
-        To Bin ${x.to_bin_id} |
-        Qty ${x.qty}
-      </div>
-    `;
-  });
+  await supabase.from("bin_transfer").insert([
+    { product_id, from_bin, to_bin, qty }
+  ]);
 
-  document.getElementById('history').innerHTML = html;
+  alert("Transfer Saved");
 }
-
-load();
 </script>
 
 </body>
