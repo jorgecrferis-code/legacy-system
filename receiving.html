@@ -11,17 +11,22 @@
 
 <h2>RECEIVING</h2>
 
-<h3>Open Purchase Orders</h3>
+<select id="po"></select>
+<select id="product"></select>
+<input id="qty" type="number" placeholder="Qty Received">
+<button onclick="receive()">Receive</button>
+
+<h3>Receiving History</h3>
 <table border="1" cellpadding="5">
 <thead>
 <tr>
 <th>PO</th>
-<th>Vendor</th>
-<th>Status</th>
-<th>Receive</th>
+<th>Product</th>
+<th>Qty</th>
+<th>Date</th>
 </tr>
 </thead>
-<tbody id="poList"></tbody>
+<tbody id="history"></tbody>
 </table>
 
 <script>
@@ -30,77 +35,79 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-loadPO();
+loadPOs();
+loadProducts();
+loadHistory();
 
-async function loadPO() {
+async function loadPOs() {
+  let { data } = await supabase.from("purchase_orders").select("*");
+  let html = "";
+  for (const po of data) {
+    html += `<option value="${po.id}">PO #${po.id}</option>`;
+  }
+  document.getElementById("po").innerHTML = html;
+}
+
+async function loadProducts() {
+  let { data } = await supabase.from("products").select("*");
+  let html = "";
+  for (const p of data) {
+    html += `<option value="${p.id}">${p.name}</option>`;
+  }
+  document.getElementById("product").innerHTML = html;
+}
+
+async function receive() {
+  const purchase_order_id = document.getElementById("po").value;
+  const product_id = document.getElementById("product").value;
+  const qty = document.getElementById("qty").value;
+
+  await supabase.from("receiving").insert([
+    { purchase_order_id, product_id, qty }
+  ]);
+
+  // Atualizar estoque
   let { data } = await supabase
-    .from("purchase_orders")
-    .select("*")
-    .eq("status", "open");
+    .from("products")
+    .select("stock")
+    .eq("id", product_id)
+    .single();
+
+  let newStock = (data.stock || 0) + Number(qty);
+
+  await supabase
+    .from("products")
+    .update({ stock: newStock })
+    .eq("id", product_id);
+
+  alert("Received and Stock Updated");
+  location.reload();
+}
+
+async function loadHistory() {
+  let { data } = await supabase
+    .from("receiving")
+    .select(`
+      qty,
+      received_date,
+      purchase_orders(id),
+      products(name)
+    `);
 
   let html = "";
 
-  for (const po of data) {
+  for (const r of data) {
     html += `
       <tr>
-        <td>${po.id}</td>
-        <td>${po.vendor}</td>
-        <td>${po.status}</td>
-        <td>
-          <button onclick="receivePO(${po.id})">RECEIVE</button>
-        </td>
+        <td>${r.purchase_orders.id}</td>
+        <td>${r.products.name}</td>
+        <td>${r.qty}</td>
+        <td>${new Date(r.received_date).toLocaleDateString()}</td>
       </tr>
     `;
   }
 
-  document.getElementById("poList").innerHTML = html;
-}
-
-async function receivePO(poId) {
-
-  // pegar itens do PO
-  let { data: items } = await supabase
-    .from("purchase_order_items")
-    .select("*")
-    .eq("po_id", poId);
-
-  for (const item of items) {
-
-    // aumentar estoque
-    let { data: product } = await supabase
-      .from("products")
-      .select("stock")
-      .eq("id", item.product_id)
-      .single();
-
-    let newStock = Number(product.stock) + Number(item.qty);
-
-    await supabase
-      .from("products")
-      .update({ stock: newStock })
-      .eq("id", item.product_id);
-
-    // criar transação
-    await supabase
-      .from("inventory_transactions")
-      .insert([
-        {
-          product_id: item.product_id,
-          qty: item.qty,
-          type: "RECEIVING",
-          reference: "PO " + poId
-        }
-      ]);
-  }
-
-  // fechar PO
-  await supabase
-    .from("purchase_orders")
-    .update({ status: "received" })
-    .eq("id", poId);
-
-  alert("Inventory Updated from PO!");
-  location.reload();
+  document.getElementById("history").innerHTML = html;
 }
 </script>
 
