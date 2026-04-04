@@ -4,230 +4,69 @@
   <meta charset="UTF-8">
   <title>New Order</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
 <h2>NEW ORDER</h2>
 
-<label><b>Customer:</b></label><br>
-<select id="customer" onchange="customerChanged()" style="width:100%; padding:10px; font-size:16px;"></select>
+Customer:<br>
+<input type="text" id="customer"><br><br>
 
-<br><br>
+Notes:<br>
+<input type="text" id="notes"><br><br>
 
-<div id="customerInfo" style="background:white; border:1px solid #ddd; padding:15px; border-radius:8px;">
-  Select a customer
-</div>
+<h3>Add Items</h3>
 
-<br>
+Product:<br>
+<input type="text" id="product"><br>
+Qty:<br>
+<input type="number" id="qty"><br><br>
 
-<input
-  type="text"
-  id="productSearch"
-  placeholder="Search product..."
-  style="width:100%; padding:10px; font-size:16px;"
-  onkeyup="searchProducts()"
-/>
+<button onclick="addItem()">Add Item</button>
 
-<div id="productList" style="margin-top:15px;"></div>
-
-<h3>ORDER ITEMS</h3>
-<div id="orderItems"></div>
-
-<h3 id="grandTotal">Grand Total: $0.00</h3>
+<h3>Items</h3>
+<div id="items"></div>
 
 <br>
-<button onclick="submitOrder()" style="padding:12px 20px; font-size:16px;">SUBMIT ORDER</button>
+<button onclick="saveOrder()">SAVE ORDER</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/script.js"></script>
 
 <script>
-const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+let items = [];
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+function addItem() {
+  const product = document.getElementById("product").value;
+  const qty = document.getElementById("qty").value;
 
-let customers = [];
-let selectedCustomer = null;
-let orderItems = [];
+  items.push({ product, qty });
 
-async function loadCustomers() {
-  let { data } = await supabase
-    .from('customers')
-    .select('*')
-    .order('customer_name');
-
-  customers = data;
-
-  let select = document.getElementById('customer');
-  select.innerHTML = '<option value="">Select customer</option>';
-
-  customers.forEach(c => {
-    select.innerHTML += `<option value="${c.id}">${c.customer_name}</option>`;
-  });
-}
-
-function customerChanged() {
-  let customerId = document.getElementById('customer').value;
-  selectedCustomer = customers.find(c => c.id == customerId);
-
-  let info = document.getElementById('customerInfo');
-
-  if (!selectedCustomer) {
-    info.innerHTML = 'Select a customer';
-    return;
-  }
-
-  info.innerHTML = `
-    <b>${selectedCustomer.customer_name}</b><br>
-    Price Table: <b>${selectedCustomer.price_table}</b>
-  `;
-
-  searchProducts();
-}
-
-async function getPriceForProduct(productId) {
-
-  if (!selectedCustomer) return 0;
-
-  let priceTable = selectedCustomer.price_table;
-
-  let { data } = await supabase
-    .from('product_prices')
-    .select('*')
-    .eq('product_id', productId)
-    .eq('price_table', priceTable)
-    .limit(1);
-
-  if (!data || data.length == 0) return 0;
-
-  return Number(data[0].price_box || 0);
-}
-
-async function searchProducts() {
-  let search = document.getElementById('productSearch').value;
-
-  if (!selectedCustomer) {
-    document.getElementById('productList').innerHTML = "Select customer first";
-    return;
-  }
-
-  let query = supabase
-    .from('products')
-    .select('*')
-    .limit(10);
-
-  if (search) {
-    query = query.ilike('name', '%' + search + '%');
-  }
-
-  let { data } = await query;
-
-  let html = '';
-
-  for (let p of data) {
-    let price = await getPriceForProduct(p.id);
-
-    html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
-        <b>${p.name}</b><br>
-        Price: <b>$${price.toFixed(2)}</b><br><br>
-        <button onclick="addItem(${p.id}, '${p.name}', ${price})">ADD</button>
-      </div>
-    `;
-  }
-
-  document.getElementById('productList').innerHTML = html;
-}
-
-function addItem(id, name, price) {
-  let existing = orderItems.find(x => x.product_id === id);
-
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    orderItems.push({
-      product_id: id,
-      name: name,
-      qty: 1,
-      price: price
-    });
-  }
-
-  renderItems();
-}
-
-function updateQty(index, qty) {
-  orderItems[index].qty = Number(qty);
-  renderItems();
-}
-
-function removeItem(index) {
-  orderItems.splice(index, 1);
   renderItems();
 }
 
 function renderItems() {
-  let html = '';
-  let total = 0;
-
-  orderItems.forEach((item, index) => {
-    let line = item.qty * item.price;
-    total += line;
-
-    html += `
-      <div style="background:white; border:1px solid #ddd; margin-bottom:10px; padding:15px; border-radius:8px;">
-        <b>${item.name}</b><br>
-        Price: $${item.price}<br>
-        Qty:
-        <input type="number" value="${item.qty}" onchange="updateQty(${index}, this.value)">
-        <br>
-        Line Total: $${line.toFixed(2)}
-        <br>
-        <button onclick="removeItem(${index})">REMOVE</button>
-      </div>
-    `;
+  let html = "";
+  items.forEach(i => {
+    html += i.product + " - " + i.qty + "<br>";
   });
-
-  document.getElementById('orderItems').innerHTML = html;
-  document.getElementById('grandTotal').innerText = "Grand Total: $" + total.toFixed(2);
+  document.getElementById("items").innerHTML = html;
 }
 
-async function submitOrder() {
+async function saveOrder() {
+  const customer = document.getElementById("customer").value;
+  const notes = document.getElementById("notes").value;
 
-  let { data: order } = await supabase
-    .from('orders')
-    .insert([{
-      customer_id: selectedCustomer.id,
-      status: 'new'
-    }])
-    .select()
-    .single();
+  const order = await createOrder(customer, notes);
 
-  for (let item of orderItems) {
-
-    await supabase
-      .from('order_items')
-      .insert([{
-        order_id: order.id,
-        product_id: item.product_id,
-        qty_boxes: item.qty,
-        price: item.price,
-        total: item.qty * item.price
-      }]);
-
-    await supabase.rpc('allocate_inventory', {
-      p_product_id: item.product_id,
-      p_qty: item.qty,
-      p_order_id: order.id
-    });
+  for (let i of items) {
+    await addOrderItem(order.id, i.product, i.qty);
   }
 
   alert("Order Created!");
-  window.location.href = "waiting-picking.html";
+  window.location.href = "orders-waiting-picking.html";
 }
-
-loadCustomers();
-renderItems();
 </script>
 
 </body>
