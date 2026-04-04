@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Vendors</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>VENDORS</h2>
+
+<input id="name" placeholder="Vendor Name">
+<input id="phone" placeholder="Phone">
+<input id="email" placeholder="Email">
+<input id="address" placeholder="Address">
+<button onclick="createVendor()">Create Vendor</button>
+
+<h3>Vendor List</h3>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Phone</th>
+<th>Email</th>
+<th>Address</th>
+</tr>
+</thead>
+<tbody id="vendors"></tbody>
+</table>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+loadVendors();
+
+async function createVendor() {
+  const name = document.getElementById("name").value;
+  const phone = document.getElementById("phone").value;
+  const email = document.getElementById("email").value;
+  const address = document.getElementById("address").value;
+
+  await supabase.from("vendors").insert([
+    { name, phone, email, address }
+  ]);
+
+  location.reload();
+}
+
+async function loadVendors() {
+  let { data } = await supabase.from("vendors").select("*");
+
+  let html = "";
+
+  for (const v of data) {
+    html += `
+      <tr>
+        <td>${v.id}</td>
+        <td>${v.name}</td>
+        <td>${v.phone}</td>
+        <td>${v.email}</td>
+        <td>${v.address}</td>
+      </tr>
+    `;
+  }
+
+  document.getElementById("vendors").innerHTML = html;
+}
+</script>
+
+</body>
+</html>
