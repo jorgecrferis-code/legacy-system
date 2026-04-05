@@ -11,59 +11,122 @@
 
 <h2>DELIVERY</h2>
 
+<label>Order</label><br>
+<select id="order"></select>
+<br><br>
+
+<button onclick="deliverOrder()">Deliver Order</button>
+
+<h3>Order Items</h3>
 <table border="1" cellpadding="5">
 <thead>
 <tr>
-<th>Order</th>
-<th>Customer</th>
-<th>Date</th>
-<th>Status</th>
-<th>Deliver</th>
+<th>Product</th>
+<th>Qty</th>
 </tr>
 </thead>
-<tbody id="orders"></tbody>
+<tbody id="items"></tbody>
 </table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 loadOrders();
 
 async function loadOrders() {
-  const { data: orders } = await supabaseClient
+  let { data } = await supabase
     .from("orders")
     .select("*")
-    .eq("status", "loaded")
-    .order("id", { ascending: true });
+    .eq("status", "OPEN");
+
+  let select = document.getElementById("order");
+  select.innerHTML = "";
+
+  data.forEach(o => {
+    select.innerHTML += `<option value="${o.id}">Order #${o.id}</option>`;
+  });
+
+  loadItems();
+}
+
+document.getElementById("order").onchange = loadItems;
+
+async function loadItems() {
+  let orderId = document.getElementById("order").value;
+
+  let { data } = await supabase
+    .from("order_items")
+    .select("*, products(name)")
+    .eq("order_id", orderId);
 
   let html = "";
 
-  for (const order of orders) {
+  data.forEach(i => {
     html += `
       <tr>
-        <td>${order.id}</td>
-        <td>${order.customer_name}</td>
-        <td>${order.created_at.substring(0,10)}</td>
-        <td>${order.status}</td>
-        <td>
-          <button onclick="deliver(${order.id})">DELIVERED</button>
-        </td>
+        <td>${i.products.name}</td>
+        <td>${i.qty}</td>
       </tr>
     `;
-  }
+  });
 
-  document.getElementById("orders").innerHTML = html;
+  document.getElementById("items").innerHTML = html;
 }
 
-async function deliver(id) {
-  await supabaseClient
-    .from("orders")
-    .update({ status: "delivered" })
-    .eq("id", id);
+async function updateAvailable(productId) {
+  let { data } = await supabase
+    .from("products")
+    .select("on_hand, on_order, allocated")
+    .eq("id", productId)
+    .single();
 
+  let available = (data.on_hand || 0) + (data.on_order || 0) - (data.allocated || 0);
+
+  await supabase
+    .from("products")
+    .update({ available: available })
+    .eq("id", productId);
+}
+
+async function deliverOrder() {
+  let orderId = document.getElementById("order").value;
+
+  let { data: items } = await supabase
+    .from("order_items")
+    .select("*")
+    .eq("order_id", orderId);
+
+  for (const item of items) {
+
+    let { data: product } = await supabase
+      .from("products")
+      .select("on_hand, allocated")
+      .eq("id", item.product_id)
+      .single();
+
+    let newOnHand = (product.on_hand || 0) - item.qty;
+    let newAllocated = (product.allocated || 0) - item.qty;
+
+    await supabase
+      .from("products")
+      .update({
+        on_hand: newOnHand,
+        allocated: newAllocated
+      })
+      .eq("id", item.product_id);
+
+    await updateAvailable(item.product_id);
+  }
+
+  await supabase
+    .from("orders")
+    .update({ status: "DELIVERED" })
+    .eq("id", orderId);
+
+  alert("Order Delivered and Inventory Updated");
   location.reload();
 }
 </script>
