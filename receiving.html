@@ -15,11 +15,39 @@
 <select id="product"></select>
 <br><br>
 
-<label>Qty Received</label><br>
+<label>Qty</label><br>
 <input id="qty" type="number">
 <br><br>
 
-<button onclick="receiveProduct()">Receive</button>
+<label>Bin</label><br>
+<input id="bin">
+<br><br>
+
+<label>Lot</label><br>
+<input id="lot">
+<br><br>
+
+<label>Expiration</label><br>
+<input id="exp" type="date">
+<br><br>
+
+<button onclick="receive()">Receive</button>
+
+<hr>
+
+<h3>Inventory</h3>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Product</th>
+<th>Bin</th>
+<th>Lot</th>
+<th>Expiration</th>
+<th>Qty</th>
+</tr>
+</thead>
+<tbody id="table"></tbody>
+</table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -28,76 +56,63 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 loadProducts();
+loadInventory();
 
 async function loadProducts() {
   let { data } = await supabase.from("products").select("*");
+
   let select = document.getElementById("product");
   select.innerHTML = "";
+
   (data || []).forEach(p => {
     select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
   });
 }
 
-async function updateAvailable(productId) {
-  let { data } = await supabase
-    .from("products")
-    .select("on_hand, on_order, allocated")
-    .eq("id", productId)
-    .single();
+async function receive() {
+  let product = document.getElementById("product").value;
+  let qty = document.getElementById("qty").value;
+  let bin = document.getElementById("bin").value;
+  let lot = document.getElementById("lot").value;
+  let exp = document.getElementById("exp").value;
 
-  let available =
-    Number(data?.on_hand || 0) +
-    Number(data?.on_order || 0) -
-    Number(data?.allocated || 0);
-
-  await supabase
-    .from("products")
-    .update({ available: available })
-    .eq("id", productId);
-}
-
-async function addLedger(productId, qty, type, reference) {
-  await supabase.from("inventory_ledger").insert({
-    product_id: productId,
-    qty: qty,
-    type: type,
-    reference: reference
-  });
-}
-
-async function receiveProduct() {
-  let productId = document.getElementById("product").value;
-  let qty = Number(document.getElementById("qty").value);
-
-  if (!productId || !qty) {
-    alert("Select product and qty");
+  if (!product || !qty || !bin || !lot || !exp) {
+    alert("Fill all fields");
     return;
   }
 
-  let { data: product } = await supabase
-    .from("products")
-    .select("on_hand, on_order")
-    .eq("id", productId)
-    .single();
+  await supabase.from("inventory").insert({
+    product_id: product,
+    bin: bin,
+    lot: lot,
+    expiration_date: exp,
+    qty: qty
+  });
 
-  let newOnHand = Number(product?.on_hand || 0) + qty;
-  let newOnOrder = Number(product?.on_order || 0) - qty;
+  alert("Received");
+  loadInventory();
+}
 
-  if (newOnOrder < 0) newOnOrder = 0;
+async function loadInventory() {
+  let { data } = await supabase
+    .from("inventory")
+    .select("*, products(name)");
 
-  await supabase
-    .from("products")
-    .update({
-      on_hand: newOnHand,
-      on_order: newOnOrder
-    })
-    .eq("id", productId);
+  let html = "";
 
-  await updateAvailable(productId);
-  await addLedger(productId, qty, "RECEIVING", "Receiving");
+  (data || []).forEach(i => {
+    html += `
+      <tr>
+        <td>${i.products?.name || ""}</td>
+        <td>${i.bin}</td>
+        <td>${i.lot}</td>
+        <td>${i.expiration_date}</td>
+        <td>${i.qty}</td>
+      </tr>
+    `;
+  });
 
-  alert("Received and Inventory Updated");
-  location.reload();
+  document.getElementById("table").innerHTML = html;
 }
 </script>
 
