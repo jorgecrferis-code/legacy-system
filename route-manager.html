@@ -11,6 +11,8 @@
 
 <h2>ROUTE MANAGER</h2>
 
+<h3>Create Route</h3>
+
 <label>Route Name</label><br>
 <input id="route_name">
 <br><br>
@@ -29,7 +31,7 @@
 
 <h3>Assign Orders to Route</h3>
 
-<label>Route</label><br>
+<label>Select Route</label><br>
 <select id="route"></select>
 <br><br>
 
@@ -42,6 +44,7 @@
 <hr>
 
 <h3>Route Orders</h3>
+
 <table border="1" cellpadding="5">
 <thead>
 <tr>
@@ -82,6 +85,11 @@ async function createRoute() {
   });
 
   alert("Route Created");
+
+  document.getElementById("route_name").value = "";
+  document.getElementById("truck").value = "";
+  document.getElementById("driver").value = "";
+
   loadRoutes();
 }
 
@@ -92,7 +100,7 @@ async function loadRoutes() {
   select.innerHTML = "";
 
   (data || []).forEach(r => {
-    select.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+    select.innerHTML += `<option value="${r.id}">${r.name} - ${r.truck} - ${r.driver}</option>`;
   });
 }
 
@@ -114,13 +122,25 @@ async function assignOrder() {
   let routeId = document.getElementById("route").value;
   let orderId = document.getElementById("order").value;
 
+  if (!routeId || !orderId) {
+    alert("Select route and order");
+    return;
+  }
+
   await supabase.from("route_orders").insert({
     route_id: routeId,
     order_id: orderId
   });
 
-  alert("Order Assigned");
+  await supabase
+    .from("orders")
+    .update({ status: "ROUTE" })
+    .eq("id", orderId);
+
+  alert("Order Assigned to Route");
+
   loadTable();
+  loadOrders();
 }
 
 async function loadTable() {
@@ -133,10 +153,10 @@ async function loadTable() {
   (data || []).forEach(r => {
     html += `
       <tr>
-        <td>${r.routes.name}</td>
-        <td>${r.routes.truck}</td>
-        <td>${r.routes.driver}</td>
-        <td>Order #${r.orders.id}</td>
+        <td>${r.routes?.name || ""}</td>
+        <td>${r.routes?.truck || ""}</td>
+        <td>${r.routes?.driver || ""}</td>
+        <td>Order #${r.orders?.id || ""}</td>
       </tr>
     `;
   });
