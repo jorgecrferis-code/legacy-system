@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Picking by Bin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>PICKING BY BIN</h2>
+
+<label>Order</label><br>
+<select id="order"></select>
+<br><br>
+
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Product</th>
+<th>Qty</th>
+<th>Bin</th>
+<th>Bin Qty</th>
+<th>Pick</th>
+</tr>
+</thead>
+<tbody id="picking"></tbody>
+</table>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+loadOrders();
+
+async function loadOrders() {
+  let { data } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("status", "OPEN");
+
+  let select = document.getElementById("order");
+  select.innerHTML = "";
+
+  (data || []).forEach(o => {
+    select.innerHTML += `<option value="${o.id}">Order #${o.id}</option>`;
+  });
+
+  loadPicking();
+}
+
+document.getElementById("order").onchange = loadPicking;
+
+async function loadPicking() {
+  let orderId = document.getElementById("order").value;
+
+  let { data: items } = await supabase
+    .from("order_items")
+    .select("*, products(name)")
+    .eq("order_id", orderId);
+
+  let html = "";
+
+  for (const item of items || []) {
+    let { data: bins } = await supabase
+      .from("inventory_bins")
+      .select("*, bins(code)")
+      .eq("product_id", item.product_id);
+
+    if (bins && bins.length > 0) {
+      let bin = bins[0];
+
+      html += `
+        <tr>
+          <td>${item.products.name}</td>
+          <td>${item.qty}</td>
+          <td>${bin.bins.code}</td>
+          <td>${bin.qty}</td>
+          <td>
+            <button onclick="pickItem(${bin.id}, ${item.qty})">
+              PICK
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+  }
+
+  document.getElementById("picking").innerHTML = html;
+}
+
+async function addLedger(productId, qty, type, reference) {
+  await supabase.from("inventory_ledger").insert({
+    product_id: productId,
+    qty: qty,
+    type: type,
+    reference: reference
+  });
+}
+
+async function pickItem(inventoryBinId, qty) {
+  let { data: inv } = await supabase
+    .from("inventory_bins")
+    .select("*")
+    .eq("id", inventoryBinId)
+    .single();
+
+  let newQty = Number(inv.qty) - Number(qty);
+
+  await supabase
+    .from("inventory_bins")
+    .update({ qty: newQty })
+    .eq("id", inventoryBinId);
+
+  await addLedger(inv.product_id, -qty, "PICK", "Picking");
+
+  alert("Picked");
+  loadPicking();
+}
+</script>
+
+</body>
+</html>
