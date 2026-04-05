@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Receiving Expiration</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>RECEIVING WITH EXPIRATION</h2>
+
+<label>Product</label><br>
+<select id="product"></select>
+<br><br>
+
+<label>Quantity</label><br>
+<input id="qty" type="number">
+<br><br>
+
+<label>Lot</label><br>
+<input id="lot">
+<br><br>
+
+<label>Expiration Date</label><br>
+<input id="exp" type="date">
+<br><br>
+
+<button onclick="receive()">Receive</button>
+
+<hr>
+
+<h3>Lots</h3>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Product</th>
+<th>Lot</th>
+<th>Expiration</th>
+<th>Qty</th>
+</tr>
+</thead>
+<tbody id="lots_table"></tbody>
+</table>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+loadProducts();
+loadLots();
+
+async function loadProducts() {
+  let { data } = await supabase.from("products").select("*");
+
+  let select = document.getElementById("product");
+  select.innerHTML = "";
+
+  (data || []).forEach(p => {
+    select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+  });
+}
+
+async function receive() {
+  let product = document.getElementById("product").value;
+  let qty = document.getElementById("qty").value;
+  let lot = document.getElementById("lot").value;
+  let exp = document.getElementById("exp").value;
+
+  if (!product || !qty || !lot || !exp) {
+    alert("Fill all fields");
+    return;
+  }
+
+  await supabase.from("expiration_lots").insert({
+    product_id: product,
+    lot: lot,
+    expiration_date: exp,
+    qty: qty
+  });
+
+  let { data } = await supabase
+    .from("products")
+    .select("stock")
+    .eq("id", product)
+    .single();
+
+  let newStock = Number(data?.stock || 0) + Number(qty);
+
+  await supabase
+    .from("products")
+    .update({ stock: newStock })
+    .eq("id", product);
+
+  alert("Received with expiration");
+  loadLots();
+}
+
+async function loadLots() {
+  let { data } = await supabase
+    .from("expiration_lots")
+    .select("*, products(name)");
+
+  let html = "";
+
+  (data || []).forEach(l => {
+    html += `
+      <tr>
+        <td>${l.products?.name || ""}</td>
+        <td>${l.lot}</td>
+        <td>${l.expiration_date}</td>
+        <td>${l.qty}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("lots_table").innerHTML = html;
+}
+</script>
+
+</body>
+</html>
