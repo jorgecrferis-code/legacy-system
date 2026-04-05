@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Sales App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>SALES APP</h2>
+
+<input id="search" placeholder="Search product">
+<button onclick="searchProduct()">Search</button>
+
+<hr>
+
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Product</th>
+<th>Price</th>
+<th>Stock</th>
+<th>Box Weight</th>
+<th>Type</th>
+<th>Expiration</th>
+</tr>
+</thead>
+<tbody id="products"></tbody>
+</table>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function searchProduct() {
+  let text = document.getElementById("search").value;
+
+  let { data } = await supabase
+    .from("products")
+    .select("*")
+    .ilike("name", "%" + text + "%");
+
+  let html = "";
+
+  (data || []).forEach(p => {
+    html += `
+      <tr>
+        <td>${p.name || ""}</td>
+        <td>$${Number(p.price || 0).toFixed(2)}</td>
+        <td>${p.stock || 0}</td>
+        <td>${p.box_weight || ""}</td>
+        <td>${p.type || ""}</td>
+        <td>${p.expiration_date || ""}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("products").innerHTML = html;
+}
+</script>
+
+</body>
+</html>
