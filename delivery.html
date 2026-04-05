@@ -11,7 +11,7 @@
 
 <h2>DELIVERY</h2>
 
-<label>Order</label><br>
+<label>Order Ready</label><br>
 <select id="order"></select>
 <br><br>
 
@@ -40,7 +40,7 @@ async function loadOrders() {
   let { data } = await supabase
     .from("orders")
     .select("*")
-    .eq("status", "OPEN");
+    .eq("status", "READY");
 
   let select = document.getElementById("order");
   select.innerHTML = "";
@@ -122,6 +122,7 @@ async function deliverOrder() {
     .eq("order_id", orderId);
 
   for (const item of items || []) {
+
     let { data: product } = await supabase
       .from("products")
       .select("on_hand, allocated")
