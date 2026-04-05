@@ -9,16 +9,17 @@
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
-<h2>BINS</h2>
+<h2>BIN LOCATIONS</h2>
 
-<input id="binName" placeholder="Bin Name">
-<button onclick="createBin()">Create Bin</button>
+<input id="bin_code" placeholder="Bin Code">
+<button onclick="addBin()">Add Bin</button>
+
+<br><br>
 
 <table border="1" cellpadding="5">
 <thead>
 <tr>
-<th>ID</th>
-<th>Name</th>
+<th>Bin</th>
 </tr>
 </thead>
 <tbody id="bins"></tbody>
@@ -32,33 +33,34 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 loadBins();
 
-async function createBin() {
-  const name = document.getElementById("binName").value;
-
-  await supabase.from("bins").insert([
-    { name: name }
-  ]);
-
-  location.reload();
-}
-
 async function loadBins() {
-  let { data } = await supabase
-    .from("bins")
-    .select("*");
+  let { data } = await supabase.from("bins").select("*");
 
   let html = "";
 
-  for (const bin of data) {
+  (data || []).forEach(b => {
     html += `
       <tr>
-        <td>${bin.id}</td>
-        <td>${bin.name}</td>
+        <td>${b.code}</td>
       </tr>
     `;
-  }
+  });
 
   document.getElementById("bins").innerHTML = html;
+}
+
+async function addBin() {
+  let code = document.getElementById("bin_code").value;
+
+  if (!code) {
+    alert("Enter bin code");
+    return;
+  }
+
+  await supabase.from("bins").insert({ code: code });
+
+  document.getElementById("bin_code").value = "";
+  loadBins();
 }
 </script>
 
