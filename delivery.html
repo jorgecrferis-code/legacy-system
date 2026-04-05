@@ -45,7 +45,7 @@ async function loadOrders() {
   let select = document.getElementById("order");
   select.innerHTML = "";
 
-  data.forEach(o => {
+  (data || []).forEach(o => {
     select.innerHTML += `<option value="${o.id}">Order #${o.id}</option>`;
   });
 
@@ -57,6 +57,11 @@ document.getElementById("order").onchange = loadItems;
 async function loadItems() {
   let orderId = document.getElementById("order").value;
 
+  if (!orderId) {
+    document.getElementById("items").innerHTML = "";
+    return;
+  }
+
   let { data } = await supabase
     .from("order_items")
     .select("*, products(name)")
@@ -64,10 +69,10 @@ async function loadItems() {
 
   let html = "";
 
-  data.forEach(i => {
+  (data || []).forEach(i => {
     html += `
       <tr>
-        <td>${i.products.name}</td>
+        <td>${i.products?.name || ""}</td>
         <td>${i.qty}</td>
       </tr>
     `;
@@ -83,7 +88,10 @@ async function updateAvailable(productId) {
     .eq("id", productId)
     .single();
 
-  let available = (data.on_hand || 0) + (data.on_order || 0) - (data.allocated || 0);
+  let available =
+    Number(data?.on_hand || 0) +
+    Number(data?.on_order || 0) -
+    Number(data?.allocated || 0);
 
   await supabase
     .from("products")
@@ -91,24 +99,37 @@ async function updateAvailable(productId) {
     .eq("id", productId);
 }
 
+async function addLedger(productId, qty, type, reference) {
+  await supabase.from("inventory_ledger").insert({
+    product_id: productId,
+    qty: qty,
+    type: type,
+    reference: reference
+  });
+}
+
 async function deliverOrder() {
   let orderId = document.getElementById("order").value;
+
+  if (!orderId) {
+    alert("Select order");
+    return;
+  }
 
   let { data: items } = await supabase
     .from("order_items")
     .select("*")
     .eq("order_id", orderId);
 
-  for (const item of items) {
-
+  for (const item of items || []) {
     let { data: product } = await supabase
       .from("products")
       .select("on_hand, allocated")
       .eq("id", item.product_id)
       .single();
 
-    let newOnHand = (product.on_hand || 0) - item.qty;
-    let newAllocated = (product.allocated || 0) - item.qty;
+    let newOnHand = Number(product?.on_hand || 0) - Number(item.qty);
+    let newAllocated = Number(product?.allocated || 0) - Number(item.qty);
 
     await supabase
       .from("products")
@@ -119,6 +140,7 @@ async function deliverOrder() {
       .eq("id", item.product_id);
 
     await updateAvailable(item.product_id);
+    await addLedger(item.product_id, -item.qty, "DELIVERY", "Order " + orderId);
   }
 
   await supabase
