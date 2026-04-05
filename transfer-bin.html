@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Transfer Bin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body style="font-family: Arial; background:#f4f6f8; padding:20px;">
+
+<h2>TRANSFER BIN</h2>
+
+<label>Product</label><br>
+<select id="product"></select>
+<br><br>
+
+<label>From Bin</label><br>
+<select id="from_bin"></select>
+<br><br>
+
+<label>To Bin</label><br>
+<select id="to_bin"></select>
+<br><br>
+
+<label>Qty</label><br>
+<input id="qty" type="number">
+<br><br>
+
+<button onclick="transfer()">Transfer</button>
+
+<script>
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+loadProducts();
+loadBins();
+
+async function loadProducts() {
+  let { data } = await supabase.from("products").select("*");
+  let select = document.getElementById("product");
+  select.innerHTML = "";
+  (data || []).forEach(p => {
+    select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+  });
+}
+
+async function loadBins() {
+  let { data } = await supabase.from("bins").select("*");
+
+  let from = document.getElementById("from_bin");
+  let to = document.getElementById("to_bin");
+
+  from.innerHTML = "";
+  to.innerHTML = "";
+
+  (data || []).forEach(b => {
+    from.innerHTML += `<option value="${b.id}">${b.code}</option>`;
+    to.innerHTML += `<option value="${b.id}">${b.code}</option>`;
+  });
+}
+
+async function addLedger(productId, qty, type, reference) {
+  await supabase.from("inventory_ledger").insert({
+    product_id: productId,
+    qty: qty,
+    type: type,
+    reference: reference
+  });
+}
+
+async function transfer() {
+  let productId = document.getElementById("product").value;
+  let fromBin = document.getElementById("from_bin").value;
+  let toBin = document.getElementById("to_bin").value;
+  let qty = Number(document.getElementById("qty").value);
+
+  if (!productId || !fromBin || !toBin || !qty) {
+    alert("Fill all fields");
+    return;
+  }
+
+  // FROM BIN
+  let { data: from } = await supabase
+    .from("inventory_bins")
+    .select("*")
+    .eq("product_id", productId)
+    .eq("bin_id", fromBin)
+    .single();
+
+  let newFromQty = Number(from.qty) - qty;
+
+  await supabase
+    .from("inventory_bins")
+    .update({ qty: newFromQty })
+    .eq("id", from.id);
+
+  // TO BIN
+  let { data: to } = await supabase
+    .from("inventory_bins")
+    .select("*")
+    .eq("product_id", productId)
+    .eq("bin_id", toBin)
+    .maybeSingle();
+
+  if (to) {
+    let newToQty = Number(to.qty) + qty;
+
+    await supabase
+      .from("inventory_bins")
+      .update({ qty: newToQty })
+      .eq("id", to.id);
+  } else {
+    await supabase.from("inventory_bins").insert({
+      product_id: productId,
+      bin_id: toBin,
+      qty: qty
+    });
+  }
+
+  await addLedger(productId, qty, "TRANSFER", "Bin Transfer");
+
+  alert("Transfer Done");
+}
+</script>
+
+</body>
+</html>
