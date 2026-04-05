@@ -11,6 +11,24 @@
 
 <h2>INVENTORY BY BIN</h2>
 
+<label>Product</label><br>
+<select id="product"></select>
+<br><br>
+
+<label>Bin</label><br>
+<select id="bin"></select>
+<br><br>
+
+<label>Qty</label><br>
+<input id="qty" type="number">
+<br><br>
+
+<button onclick="addInventory()">Add / Update</button>
+
+<hr>
+
+<h3>Inventory</h3>
+
 <table border="1" cellpadding="5">
 <thead>
 <tr>
@@ -19,39 +37,90 @@
 <th>Qty</th>
 </tr>
 </thead>
-<tbody id="inventory"></tbody>
+<tbody id="table"></tbody>
 </table>
 
 <script>
-const supabase = window.supabase.createClient(
-  "https://ougbokufspjduwepqepj.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ"
-);
+const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
-loadInventory();
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function loadInventory() {
+loadProducts();
+loadBins();
+loadTable();
+
+async function loadProducts() {
+  let { data } = await supabase.from("products").select("*");
+
+  let select = document.getElementById("product");
+  select.innerHTML = "";
+
+  (data || []).forEach(p => {
+    select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+  });
+}
+
+async function loadBins() {
+  let { data } = await supabase.from("bins").select("*");
+
+  let select = document.getElementById("bin");
+  select.innerHTML = "";
+
+  (data || []).forEach(b => {
+    select.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+  });
+}
+
+async function addInventory() {
+  let product = document.getElementById("product").value;
+  let bin = document.getElementById("bin").value;
+  let qty = document.getElementById("qty").value;
+
   let { data } = await supabase
-    .from("inventory_by_bin")
-    .select(`
-      qty,
-      products(name),
-      bins(name)
-    `);
+    .from("inventory_bins")
+    .select("*")
+    .eq("product_id", product)
+    .eq("bin_id", bin)
+    .single();
+
+  if (data) {
+    let newQty = Number(data.qty) + Number(qty);
+
+    await supabase
+      .from("inventory_bins")
+      .update({ qty: newQty })
+      .eq("id", data.id);
+  } else {
+    await supabase.from("inventory_bins").insert({
+      product_id: product,
+      bin_id: bin,
+      qty: qty
+    });
+  }
+
+  alert("Inventory Updated");
+  loadTable();
+}
+
+async function loadTable() {
+  let { data } = await supabase
+    .from("inventory_bins")
+    .select("*, products(name), bins(name)");
 
   let html = "";
 
-  for (const i of data) {
+  (data || []).forEach(i => {
     html += `
       <tr>
-        <td>${i.products.name}</td>
-        <td>${i.bins.name}</td>
+        <td>${i.products?.name || ""}</td>
+        <td>${i.bins?.name || ""}</td>
         <td>${i.qty}</td>
       </tr>
     `;
-  }
+  });
 
-  document.getElementById("inventory").innerHTML = html;
+  document.getElementById("table").innerHTML = html;
 }
 </script>
 
