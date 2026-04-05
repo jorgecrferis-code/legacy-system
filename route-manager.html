@@ -11,27 +11,48 @@
 
 <h2>ROUTE MANAGER</h2>
 
-<h3>Create Route</h3>
+<label>Route Name</label><br>
+<input id="route_name">
+<br><br>
 
-<input id="route_name" placeholder="Route Name" style="width:100%; padding:10px;"><br><br>
-<input id="driver_name" placeholder="Driver Name" style="width:100%; padding:10px;"><br><br>
-<input id="route_date" type="date" style="width:100%; padding:10px;"><br><br>
+<label>Truck</label><br>
+<input id="truck">
+<br><br>
 
-<button onclick="createRoute()" style="padding:12px 20px;">CREATE ROUTE</button>
+<label>Driver</label><br>
+<input id="driver">
+<br><br>
 
-<hr>
-
-<h3>Add Order to Route</h3>
-
-<input id="route_id" placeholder="Route ID" style="width:100%; padding:10px;"><br><br>
-<input id="order_id" placeholder="Order ID" style="width:100%; padding:10px;"><br><br>
-
-<button onclick="addOrderToRoute()" style="padding:12px 20px;">ADD ORDER</button>
+<button onclick="createRoute()">Create Route</button>
 
 <hr>
 
-<h3>Open Routes</h3>
-<div id="routes">Loading...</div>
+<h3>Assign Orders to Route</h3>
+
+<label>Route</label><br>
+<select id="route"></select>
+<br><br>
+
+<label>Order READY</label><br>
+<select id="order"></select>
+<br><br>
+
+<button onclick="assignOrder()">Assign Order</button>
+
+<hr>
+
+<h3>Route Orders</h3>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Route</th>
+<th>Truck</th>
+<th>Driver</th>
+<th>Order</th>
+</tr>
+</thead>
+<tbody id="routes_table"></tbody>
+</table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -39,100 +60,89 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function createRoute(){
-  const route_name = document.getElementById('route_name').value;
-  const driver_name = document.getElementById('driver_name').value;
-  const route_date = document.getElementById('route_date').value;
-
-  let { error } = await supabase.from('routes').insert([{
-    route_name,
-    driver_name,
-    route_date,
-    status: 'open'
-  }]);
-
-  if(error){
-    alert(error.message);
-    return;
-  }
-
-  alert('Route created');
-  loadRoutes();
-}
-
-async function addOrderToRoute(){
-  const route_id = document.getElementById('route_id').value;
-  const order_id = document.getElementById('order_id').value;
-
-  let { error: linkError } = await supabase.from('route_orders').insert([{
-    route_id,
-    order_id
-  }]);
-
-  if(linkError){
-    alert(linkError.message);
-    return;
-  }
-
-  await supabase
-    .from('orders')
-    .update({ status: 'routed' })
-    .eq('id', order_id);
-
-  alert('Order added to route');
-  loadRoutes();
-}
-
-async function closeRoute(routeId){
-  let { error } = await supabase
-    .from('routes')
-    .update({ status: 'closed' })
-    .eq('id', routeId);
-
-  if(error){
-    alert(error.message);
-    return;
-  }
-
-  loadRoutes();
-}
-
-async function loadRoutes(){
-  let { data, error } = await supabase
-    .from('routes')
-    .select('*')
-    .order('route_date', { ascending:false });
-
-  if(error){
-    document.getElementById('routes').innerHTML = error.message;
-    return;
-  }
-
-  let html = '';
-
-  for (let r of (data || [])) {
-    let { data: routeItems } = await supabase
-      .from('route_orders')
-      .select('*')
-      .eq('route_id', r.id);
-
-    html += `
-      <div style="background:white; border:1px solid #ddd; padding:15px; margin-bottom:10px; border-radius:8px;">
-        <b>Route #${r.id}</b><br>
-        Name: ${r.route_name || '-'}<br>
-        Driver: ${r.driver_name || '-'}<br>
-        Date: ${r.route_date || '-'}<br>
-        Status: <b>${r.status || '-'}</b><br>
-        Orders in Route: ${(routeItems || []).length}<br><br>
-        <button onclick="closeRoute(${r.id})">CLOSE ROUTE</button>
-      </div>
-    `;
-  }
-
-  document.getElementById('routes').innerHTML = html || 'No routes found';
-}
-
 loadRoutes();
+loadOrders();
+loadTable();
+
+async function createRoute() {
+  let name = document.getElementById("route_name").value;
+  let truck = document.getElementById("truck").value;
+  let driver = document.getElementById("driver").value;
+
+  if (!name || !truck || !driver) {
+    alert("Fill all fields");
+    return;
+  }
+
+  await supabase.from("routes").insert({
+    name: name,
+    truck: truck,
+    driver: driver,
+    status: "OPEN"
+  });
+
+  alert("Route Created");
+  loadRoutes();
+}
+
+async function loadRoutes() {
+  let { data } = await supabase.from("routes").select("*");
+
+  let select = document.getElementById("route");
+  select.innerHTML = "";
+
+  (data || []).forEach(r => {
+    select.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+  });
+}
+
+async function loadOrders() {
+  let { data } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("status", "READY");
+
+  let select = document.getElementById("order");
+  select.innerHTML = "";
+
+  (data || []).forEach(o => {
+    select.innerHTML += `<option value="${o.id}">Order #${o.id}</option>`;
+  });
+}
+
+async function assignOrder() {
+  let routeId = document.getElementById("route").value;
+  let orderId = document.getElementById("order").value;
+
+  await supabase.from("route_orders").insert({
+    route_id: routeId,
+    order_id: orderId
+  });
+
+  alert("Order Assigned");
+  loadTable();
+}
+
+async function loadTable() {
+  let { data } = await supabase
+    .from("route_orders")
+    .select("*, routes(name,truck,driver), orders(id)");
+
+  let html = "";
+
+  (data || []).forEach(r => {
+    html += `
+      <tr>
+        <td>${r.routes.name}</td>
+        <td>${r.routes.truck}</td>
+        <td>${r.routes.driver}</td>
+        <td>Order #${r.orders.id}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("routes_table").innerHTML = html;
+}
 </script>
 
 </body>
