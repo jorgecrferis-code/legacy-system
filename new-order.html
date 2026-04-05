@@ -58,7 +58,7 @@ async function loadCustomers() {
   let { data } = await supabase.from("customers").select("*");
   let select = document.getElementById("customer");
   select.innerHTML = "";
-  data.forEach(c => {
+  (data || []).forEach(c => {
     select.innerHTML += `<option value="${c.id}" data-price="${c.price_table_id || ""}">${c.name}</option>`;
   });
 }
@@ -67,7 +67,7 @@ async function loadProducts() {
   let { data } = await supabase.from("products").select("*");
   let select = document.getElementById("product");
   select.innerHTML = "";
-  data.forEach(p => {
+  (data || []).forEach(p => {
     select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
   });
 }
@@ -106,8 +106,8 @@ function addItem() {
   let productSelect = document.getElementById("product");
   let productId = productSelect.value;
   let productName = productSelect.selectedOptions[0].text;
-  let qty = document.getElementById("qty").value;
-  let price = document.getElementById("price").value;
+  let qty = Number(document.getElementById("qty").value);
+  let price = Number(document.getElementById("price").value);
 
   if (!productId || !qty || !price) {
     alert("Select product, qty and price");
@@ -117,12 +117,11 @@ function addItem() {
   orderItems.push({
     product_id: productId,
     name: productName,
-    qty: Number(qty),
-    price: Number(price)
+    qty: qty,
+    price: price
   });
 
   renderItems();
-
   document.getElementById("qty").value = "";
 }
 
@@ -138,6 +137,33 @@ function renderItems() {
     `;
   });
   document.getElementById("items").innerHTML = html;
+}
+
+async function updateAvailable(productId) {
+  let { data } = await supabase
+    .from("products")
+    .select("on_hand, on_order, allocated")
+    .eq("id", productId)
+    .single();
+
+  let available =
+    Number(data?.on_hand || 0) +
+    Number(data?.on_order || 0) -
+    Number(data?.allocated || 0);
+
+  await supabase
+    .from("products")
+    .update({ available: available })
+    .eq("id", productId);
+}
+
+async function addLedger(productId, qty, type, reference) {
+  await supabase.from("inventory_ledger").insert({
+    product_id: productId,
+    qty: qty,
+    type: type,
+    reference: reference
+  });
 }
 
 async function createOrder() {
@@ -171,6 +197,22 @@ async function createOrder() {
       qty: item.qty,
       price: item.price
     });
+
+    let { data: product } = await supabase
+      .from("products")
+      .select("allocated")
+      .eq("id", item.product_id)
+      .single();
+
+    let allocated = Number(product?.allocated || 0) + Number(item.qty);
+
+    await supabase
+      .from("products")
+      .update({ allocated: allocated })
+      .eq("id", item.product_id);
+
+    await updateAvailable(item.product_id);
+    await addLedger(item.product_id, -item.qty, "ORDER", "Order " + order.id);
   }
 
   alert("Order Created");
