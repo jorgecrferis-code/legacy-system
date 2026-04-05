@@ -11,19 +11,27 @@
 
 <h2>COMMISSION REPORT</h2>
 
+<label>Salesperson</label>
+<input id="salesperson">
+<button onclick="loadReport()">Load</button>
+
+<hr>
+
 <table border="1" cellpadding="5">
 <thead>
 <tr>
-<th>Product</th>
-<th>Qty</th>
+<th>Order</th>
+<th>Sale</th>
+<th>Cost</th>
 <th>Profit</th>
-<th>Commission (10%)</th>
+<th>Margin %</th>
+<th>Commission</th>
 </tr>
 </thead>
-<tbody id="commissions"></tbody>
+<tbody id="report"></tbody>
 </table>
 
-<h3 id="totalCommission"></h3>
+<h3 id="totals"></h3>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -31,38 +39,58 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-loadCommission();
-
-async function loadCommission() {
+async function loadReport() {
+  let salesperson = document.getElementById("salesperson").value;
 
   let { data } = await supabase
-    .from("order_items")
-    .select(`
-      qty,
-      price,
-      products(name, cost)
-    `);
+    .from("orders")
+    .select("*")
+    .eq("salesperson", salesperson)
+    .eq("status", "DELIVERED");
 
   let html = "";
+  let totalSale = 0;
+  let totalCost = 0;
+  let totalProfit = 0;
   let totalCommission = 0;
 
-  for (const item of data) {
-    let profit = (item.price - item.products.cost) * item.qty;
-    let commission = profit * 0.10;
+  (data || []).forEach(o => {
+    let margin = Number(o.margin || 0);
+    let profit = Number(o.profit || 0);
+
+    let commissionRate = 0;
+
+    if (margin < 0.05) commissionRate = 0.01;
+    else if (margin < 0.08) commissionRate = 0.05;
+    else if (margin < 0.13) commissionRate = 0.10;
+    else commissionRate = 0.15;
+
+    let commission = profit * commissionRate;
+
+    totalSale += Number(o.total_sale || 0);
+    totalCost += Number(o.total_cost || 0);
+    totalProfit += profit;
     totalCommission += commission;
 
     html += `
       <tr>
-        <td>${item.products.name}</td>
-        <td>${item.qty}</td>
+        <td>${o.id}</td>
+        <td>${Number(o.total_sale || 0).toFixed(2)}</td>
+        <td>${Number(o.total_cost || 0).toFixed(2)}</td>
         <td>${profit.toFixed(2)}</td>
+        <td>${(margin*100).toFixed(2)}%</td>
         <td>${commission.toFixed(2)}</td>
       </tr>
     `;
-  }
+  });
 
-  document.getElementById("commissions").innerHTML = html;
-  document.getElementById("totalCommission").innerText = "Total Commission: $" + totalCommission.toFixed(2);
+  document.getElementById("report").innerHTML = html;
+
+  document.getElementById("totals").innerHTML =
+    "TOTAL SALE: $" + totalSale.toFixed(2) +
+    " | TOTAL COST: $" + totalCost.toFixed(2) +
+    " | TOTAL PROFIT: $" + totalProfit.toFixed(2) +
+    " | TOTAL COMMISSION: $" + totalCommission.toFixed(2);
 }
 </script>
 
