@@ -2,29 +2,37 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Purchase Orders</title>
+<title>Purchase Order</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
 
-<h2>PURCHASE ORDERS</h2>
+<h2>PURCHASE ORDER</h2>
 
-<select id="vendor"></select>
+<label>Vendor</label><br>
+<input id="vendor">
+<br><br>
+
+<label>Product</label><br>
 <select id="product"></select>
-<input id="qty" type="number" placeholder="Qty">
-<input id="cost" type="number" placeholder="Cost">
-<button onclick="addItem()">Add Item</button>
-<button onclick="createPO()">Create Purchase Order</button>
+<br><br>
 
-<h3>Items</h3>
+<label>Qty</label><br>
+<input id="qty" type="number">
+<br><br>
+
+<button onclick="addItem()">Add Item</button>
+<button onclick="createPO()">Create PO</button>
+
+<br><br>
+
 <table border="1" cellpadding="5">
 <thead>
 <tr>
 <th>Product</th>
 <th>Qty</th>
-<th>Cost</th>
 </tr>
 </thead>
 <tbody id="items"></tbody>
@@ -36,86 +44,121 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let items = [];
+let poItems = [];
 
-loadVendors();
 loadProducts();
-
-async function loadVendors() {
-  let { data } = await supabase.from("vendors").select("*");
-  let html = "";
-  for (const v of data) {
-    html += `<option value="${v.id}">${v.name}</option>`;
-  }
-  document.getElementById("vendor").innerHTML = html;
-}
 
 async function loadProducts() {
   let { data } = await supabase.from("products").select("*");
-  let html = "";
-  for (const p of data) {
-    html += `<option value="${p.id}">${p.name}</option>`;
-  }
-  document.getElementById("product").innerHTML = html;
+  let select = document.getElementById("product");
+  select.innerHTML = "";
+  (data || []).forEach(p => {
+    select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+  });
 }
 
 function addItem() {
-  const product = document.getElementById("product");
-  const product_id = product.value;
-  const product_name = product.options[product.selectedIndex].text;
-  const qty = document.getElementById("qty").value;
-  const cost = document.getElementById("cost").value;
+  let productSelect = document.getElementById("product");
+  let productId = productSelect.value;
+  let productName = productSelect.selectedOptions[0].text;
+  let qty = Number(document.getElementById("qty").value);
 
-  items.push({ product_id, product_name, qty, cost });
+  if (!productId || !qty) {
+    alert("Select product and qty");
+    return;
+  }
+
+  poItems.push({
+    product_id: productId,
+    name: productName,
+    qty: qty
+  });
 
   renderItems();
+  document.getElementById("qty").value = "";
 }
 
 function renderItems() {
   let html = "";
-  for (const i of items) {
+  poItems.forEach(i => {
     html += `
       <tr>
-        <td>${i.product_name}</td>
+        <td>${i.name}</td>
         <td>${i.qty}</td>
-        <td>${i.cost}</td>
       </tr>
     `;
-  }
+  });
   document.getElementById("items").innerHTML = html;
 }
 
-async function createPO() {
-  const vendor_id = document.getElementById("vendor").value;
+async function updateAvailable(productId) {
+  let { data } = await supabase
+    .from("products")
+    .select("on_hand, on_order, allocated")
+    .eq("id", productId)
+    .single();
 
-  let total = 0;
-  for (const i of items) {
-    total += i.qty * i.cost;
+  let available =
+    Number(data?.on_hand || 0) +
+    Number(data?.on_order || 0) -
+    Number(data?.allocated || 0);
+
+  await supabase
+    .from("products")
+    .update({ available: available })
+    .eq("id", productId);
+}
+
+async function addLedger(productId, qty, type, reference) {
+  await supabase.from("inventory_ledger").insert({
+    product_id: productId,
+    qty: qty,
+    type: type,
+    reference: reference
+  });
+}
+
+async function createPO() {
+  let vendor = document.getElementById("vendor").value;
+
+  if (!vendor) {
+    alert("Enter vendor");
+    return;
   }
 
-  let { data } = await supabase
+  if (poItems.length === 0) {
+    alert("Add items");
+    return;
+  }
+
+  let { data: po } = await supabase
     .from("purchase_orders")
-    .insert([
-      {
-        vendor_id,
-        order_date: new Date(),
-        status: "OPEN",
-        total
-      }
-    ])
-    .select();
+    .insert([{ vendor: vendor, status: "OPEN" }])
+    .select()
+    .single();
 
-  const po_id = data[0].id;
+  for (const item of poItems) {
+    await supabase.from("purchase_items").insert({
+      po_id: po.id,
+      product_id: item.product_id,
+      qty: item.qty
+    });
 
-  for (const i of items) {
-    await supabase.from("purchase_order_items").insert([
-      {
-        purchase_order_id: po_id,
-        product_id: i.product_id,
-        qty: i.qty,
-        cost: i.cost
-      }
-    ]);
+    let { data: product } = await supabase
+      .from("products")
+      .select("on_order")
+      .eq("id", item.product_id)
+      .single();
+
+    let newOnOrder = Number(product?.on_order || 0) + Number(item.qty);
+
+    await supabase
+      .from("products")
+      .update({ on_order: newOnOrder })
+      .eq("id", item.product_id);
+
+    await updateAvailable(item.product_id);
+    await addLedger(item.product_id, item.qty, "PURCHASE", "PO " + po.id);
   }
 
   alert("Purchase Order Created");
