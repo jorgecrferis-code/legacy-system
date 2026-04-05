@@ -11,93 +11,64 @@
 
 <h2>PUT AWAY</h2>
 
+<label>Product</label><br>
 <select id="product"></select>
-<select id="bin"></select>
-<input id="qty" type="number" placeholder="Qty">
-<button onclick="putAway()">Put Away</button>
+<br><br>
 
-<h3>Inventory by Bin</h3>
-<table border="1" cellpadding="5">
-<thead>
-<tr>
-<th>Product</th>
-<th>Bin</th>
-<th>Qty</th>
-</tr>
-</thead>
-<tbody id="inventory"></tbody>
-</table>
+<label>Bin</label><br>
+<select id="bin"></select>
+<br><br>
+
+<label>Qty</label><br>
+<input id="qty" type="number">
+<br><br>
+
+<button onclick="putAway()">Put Away</button>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
-const supabase = window.supabase.createClient(
-  "https://ougbokufspjduwepqepj.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwW9kRQkM3oR1CWoPG_BaiHbBKHOVQ"
-);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 loadProducts();
 loadBins();
-loadInventory();
 
 async function loadProducts() {
   let { data } = await supabase.from("products").select("*");
-  let html = "";
-  for (const p of data) {
-    html += `<option value="${p.id}">${p.name}</option>`;
-  }
-  document.getElementById("product").innerHTML = html;
+  let select = document.getElementById("product");
+  select.innerHTML = "";
+  (data || []).forEach(p => {
+    select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+  });
 }
 
 async function loadBins() {
   let { data } = await supabase.from("bins").select("*");
-  let html = "";
-  for (const b of data) {
-    html += `<option value="${b.id}">${b.name}</option>`;
-  }
-  document.getElementById("bin").innerHTML = html;
+  let select = document.getElementById("bin");
+  select.innerHTML = "";
+  (data || []).forEach(b => {
+    select.innerHTML += `<option value="${b.id}">${b.code}</option>`;
+  });
 }
 
 async function putAway() {
-  const product_id = document.getElementById("product").value;
-  const bin_id = document.getElementById("bin").value;
-  const qty = document.getElementById("qty").value;
+  let productId = document.getElementById("product").value;
+  let binId = document.getElementById("bin").value;
+  let qty = Number(document.getElementById("qty").value);
 
-  await supabase.from("inventory_by_bin").insert([
-    { product_id, bin_id, qty }
-  ]);
-
-  await supabase.from("put_away").insert([
-    { product_id, bin_id, qty }
-  ]);
-
-  alert("Put Away Done");
-  location.reload();
-}
-
-async function loadInventory() {
-  let { data } = await supabase
-    .from("inventory_by_bin")
-    .select(`
-      qty,
-      products(name),
-      bins(name)
-    `);
-
-  let html = "";
-
-  for (const i of data) {
-    html += `
-      <tr>
-        <td>${i.products.name}</td>
-        <td>${i.bins.name}</td>
-        <td>${i.qty}</td>
-      </tr>
-    `;
+  if (!productId || !binId || !qty) {
+    alert("Fill all fields");
+    return;
   }
 
-  document.getElementById("inventory").innerHTML = html;
+  await supabase.from("inventory_bins").insert({
+    product_id: productId,
+    bin_id: binId,
+    qty: qty
+  });
+
+  alert("Put Away Done");
 }
 </script>
 
