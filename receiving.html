@@ -33,7 +33,7 @@ async function loadProducts() {
   let { data } = await supabase.from("products").select("*");
   let select = document.getElementById("product");
   select.innerHTML = "";
-  data.forEach(p => {
+  (data || []).forEach(p => {
     select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
   });
 }
@@ -45,12 +45,24 @@ async function updateAvailable(productId) {
     .eq("id", productId)
     .single();
 
-  let available = (data.on_hand || 0) + (data.on_order || 0) - (data.allocated || 0);
+  let available =
+    Number(data?.on_hand || 0) +
+    Number(data?.on_order || 0) -
+    Number(data?.allocated || 0);
 
   await supabase
     .from("products")
     .update({ available: available })
     .eq("id", productId);
+}
+
+async function addLedger(productId, qty, type, reference) {
+  await supabase.from("inventory_ledger").insert({
+    product_id: productId,
+    qty: qty,
+    type: type,
+    reference: reference
+  });
 }
 
 async function receiveProduct() {
@@ -68,8 +80,10 @@ async function receiveProduct() {
     .eq("id", productId)
     .single();
 
-  let newOnHand = (product.on_hand || 0) + qty;
-  let newOnOrder = (product.on_order || 0) - qty;
+  let newOnHand = Number(product?.on_hand || 0) + qty;
+  let newOnOrder = Number(product?.on_order || 0) - qty;
+
+  if (newOnOrder < 0) newOnOrder = 0;
 
   await supabase
     .from("products")
@@ -80,8 +94,10 @@ async function receiveProduct() {
     .eq("id", productId);
 
   await updateAvailable(productId);
+  await addLedger(productId, qty, "RECEIVING", "Receiving");
 
   alert("Received and Inventory Updated");
+  location.reload();
 }
 </script>
 
