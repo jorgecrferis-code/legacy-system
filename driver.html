@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Driver App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<title>Driver App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body style="font-family: Arial; background:#f4f6f8; padding:20px;">
@@ -12,14 +12,24 @@
 <h2>DRIVER APP</h2>
 
 <label>Driver Name</label><br>
-<input id="driver" placeholder="Driver Name" style="width:100%; padding:10px;">
+<input id="driver_name">
+<button onclick="loadRoutes()">Load Routes</button>
 
-<br><br>
+<hr>
 
-<button onclick="loadDeliveries()" style="padding:12px 20px; font-size:16px;">LOAD MY ROUTE</button>
-
-<h2>DELIVERIES</h2>
-<div id="deliveries">Loading...</div>
+<h3>Assigned Orders</h3>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Route</th>
+<th>Truck</th>
+<th>Order</th>
+<th>Status</th>
+<th>Deliver</th>
+</tr>
+</thead>
+<tbody id="driver_table"></tbody>
+</table>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
@@ -27,51 +37,100 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function loadDeliveries(){
-  const driver = document.getElementById('driver').value;
+async function loadRoutes() {
+  let driver = document.getElementById("driver_name").value;
 
-  let { data, error } = await supabase
-    .from('deliveries')
-    .select('*')
-    .eq('driver', driver)
-    .order('id', { ascending:false });
-
-  if(error){
-    document.getElementById('deliveries').innerHTML = error.message;
+  if (!driver) {
+    alert("Enter driver name");
     return;
   }
 
-  let html = '';
+  let { data } = await supabase
+    .from("route_orders")
+    .select("*, routes(name,truck,driver), orders(id,status)")
+    .eq("routes.driver", driver);
 
-  (data || []).forEach(d => {
+  let html = "";
+
+  (data || []).forEach(r => {
     html += `
-      <div style="background:white; padding:15px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
-        Delivery ID: ${d.id}<br>
-        Order: ${d.order_id || '-'}<br>
-        Customer: ${d.customer_name || '-'}<br>
-        Address: ${d.address || '-'}<br>
-        Status: ${d.status || '-'}<br><br>
-        <button onclick="deliver(${d.id})">DELIVERED</button>
-      </div>
+      <tr>
+        <td>${r.routes?.name || ""}</td>
+        <td>${r.routes?.truck || ""}</td>
+        <td>Order #${r.orders?.id || ""}</td>
+        <td>${r.orders?.status || ""}</td>
+        <td>
+          <button onclick="deliverOrder(${r.orders.id})">DELIVER</button>
+        </td>
+      </tr>
     `;
   });
 
-  document.getElementById('deliveries').innerHTML = html || 'No deliveries found';
+  document.getElementById("driver_table").innerHTML = html;
 }
 
-async function deliver(id){
-  let { error } = await supabase
-    .from('deliveries')
-    .update({ status: 'delivered' })
-    .eq('id', id);
+async function updateAvailable(productId) {
+  let { data } = await supabase
+    .from("products")
+    .select("on_hand, on_order, allocated")
+    .eq("id", productId)
+    .single();
 
-  if(error){
-    alert(error.message);
-    return;
+  let available =
+    Number(data?.on_hand || 0) +
+    Number(data?.on_order || 0) -
+    Number(data?.allocated || 0);
+
+  await supabase
+    .from("products")
+    .update({ available: available })
+    .eq("id", productId);
+}
+
+async function addLedger(productId, qty, type, reference) {
+  await supabase.from("inventory_ledger").insert({
+    product_id: productId,
+    qty: qty,
+    type: type,
+    reference: reference
+  });
+}
+
+async function deliverOrder(orderId) {
+  let { data: items } = await supabase
+    .from("order_items")
+    .select("*")
+    .eq("order_id", orderId);
+
+  for (const item of items || []) {
+    let { data: product } = await supabase
+      .from("products")
+      .select("on_hand, allocated")
+      .eq("id", item.product_id)
+      .single();
+
+    let newOnHand = Number(product?.on_hand || 0) - Number(item.qty);
+    let newAllocated = Number(product?.allocated || 0) - Number(item.qty);
+
+    await supabase
+      .from("products")
+      .update({
+        on_hand: newOnHand,
+        allocated: newAllocated
+      })
+      .eq("id", item.product_id);
+
+    await updateAvailable(item.product_id);
+    await addLedger(item.product_id, -item.qty, "DELIVERY", "Order " + orderId);
   }
 
-  alert('Delivered');
-  loadDeliveries();
+  await supabase
+    .from("orders")
+    .update({ status: "DELIVERED" })
+    .eq("id", orderId);
+
+  alert("Order Delivered");
+  loadRoutes();
 }
 </script>
 
