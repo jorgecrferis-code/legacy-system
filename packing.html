@@ -11,66 +11,82 @@
 
 <h2>PACKING</h2>
 
-<div id="orderInfo">Loading...</div>
+<label>Order</label><br>
+<select id="order"></select>
+<br><br>
 
 <h3>Items</h3>
-<div id="items"></div>
+<table border="1" cellpadding="5">
+<thead>
+<tr>
+<th>Product</th>
+<th>Qty</th>
+</tr>
+</thead>
+<tbody id="items"></tbody>
+</table>
 
 <br>
-<button onclick="finishPacking()">FINISH PACKING</button>
+<button onclick="finishPacking()">READY TO LOAD</button>
 
 <script>
 const SUPABASE_URL = "https://ougbokufspjduwepqepj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91Z2Jva3Vmc3BqZHV3ZXBxZXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTQ2MTYsImV4cCI6MjA4ODI5MDYxNn0.5C_k0vbKSE_vgmwK9kRQkM3oR1CWoPG_BaiHbBKHOVQ";
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const params = new URLSearchParams(window.location.search);
-const orderId = params.get("order_id");
+loadOrders();
 
-loadOrder();
-
-async function loadOrder() {
-
-  const { data: order } = await supabaseClient
+async function loadOrders() {
+  let { data } = await supabase
     .from("orders")
     .select("*")
-    .eq("id", orderId)
-    .single();
+    .eq("status", "OPEN");
 
-  document.getElementById("orderInfo").innerHTML =
-    "Order: " + order.id + "<br>" +
-    "Customer: " + order.customer_name;
+  let select = document.getElementById("order");
+  select.innerHTML = "";
 
-  const { data: items } = await supabaseClient
+  (data || []).forEach(o => {
+    select.innerHTML += `<option value="${o.id}">Order #${o.id}</option>`;
+  });
+
+  loadItems();
+}
+
+document.getElementById("order").onchange = loadItems;
+
+async function loadItems() {
+  let orderId = document.getElementById("order").value;
+
+  let { data } = await supabase
     .from("order_items")
-    .select("*")
+    .select("*, products(name)")
     .eq("order_id", orderId);
 
   let html = "";
 
-  for (const item of items) {
-
-    const { data: product } = await supabaseClient
-      .from("products")
-      .select("name_en")
-      .eq("id", item.product_id)
-      .single();
-
-    html += item.qty_boxes + " - " + product.name_en + "<br>";
-  }
+  (data || []).forEach(i => {
+    html += `
+      <tr>
+        <td>${i.products.name}</td>
+        <td>${i.qty}</td>
+      </tr>
+    `;
+  });
 
   document.getElementById("items").innerHTML = html;
 }
 
 async function finishPacking() {
-  await supabaseClient
+  let orderId = document.getElementById("order").value;
+
+  await supabase
     .from("orders")
-    .update({ status: "packed" })
+    .update({ status: "READY" })
     .eq("id", orderId);
 
-  alert("Packing Finished!");
-  window.location.href = "ready-to-load.html";
+  alert("Order Ready to Load");
+  location.reload();
 }
 </script>
 
